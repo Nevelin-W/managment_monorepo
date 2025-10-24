@@ -1,0 +1,63 @@
+output "auth_login_invoke_arn" {
+  value = aws_lambda_function.auth_login.invoke_arn
+}
+
+output "auth_login_name" {
+  value = aws_lambda_function.auth_login.function_name
+}
+
+output "auth_signup_invoke_arn" {
+  value = aws_lambda_function.auth_signup.invoke_arn
+}
+
+output "auth_signup_name" {
+  value = aws_lambda_function.auth_signup.function_name
+}
+
+output "auth_me_invoke_arn" {
+  value = aws_lambda_function.auth_me.invoke_arn
+}
+
+output "auth_me_name" {
+  value = aws_lambda_function.auth_me.function_name
+}
+
+output "subs_list_invoke_arn" {
+  value = aws_lambda_function.subs_list.invoke_arn
+}
+
+output "subs_list_name" {
+  value = aws_lambda_function.subs_list.function_name
+}
+
+output "subs_create_invoke_arn" {
+  value = aws_lambda_function.subs_create.invoke_arn
+}
+
+output "subs_create_name" {
+  value = aws_lambda_function.subs_create.function_name
+}
+
+output "subs_update_invoke_arn" {
+  value = aws_lambda_function.subs_update.invoke_arn
+}
+
+output "subs_update_name" {
+  value = aws_lambda_function.subs_update.function_name
+}
+
+output "subs_delete_invoke_arn" {
+  value = aws_lambda_function.subs_delete.invoke_arn
+}
+
+output "subs_delete_name" {
+  value = aws_lambda_function.subs_delete.function_name
+}
+
+output "email_processor_arn" {
+  value = aws_lambda_function.email_processor.arn
+}
+
+output "email_processor_name" {
+  value = aws_lambda_function.email_processor.function_name
+}

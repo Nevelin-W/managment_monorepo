@@ -4,9 +4,46 @@ import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/subscription_provider.dart';
+import 'config/app_config.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load configuration from build-time arguments
+  loadConfig();
+  
   runApp(const MyApp());
+}
+
+void loadConfig() {
+  // Read values from --dart-define arguments
+  const apiBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
+  const userPoolId = String.fromEnvironment(
+    'USER_POOL_ID',
+    defaultValue: '',
+  );
+  const region = String.fromEnvironment(
+    'REGION',
+    defaultValue: '',
+  );
+
+  // Validate that all required values are provided
+  if (apiBaseUrl.isEmpty || userPoolId.isEmpty || region.isEmpty) {
+    throw Exception(
+      'Missing required configuration. Please provide API_BASE_URL, USER_POOL_ID, and REGION as build arguments.\n'
+      'Example: flutter run --dart-define=API_BASE_URL=https://... --dart-define=USER_POOL_ID=... --dart-define=REGION=...'
+    );
+  }
+
+  // Initialize AppConfig
+  AppConfig.initialize(
+    apiBaseUrl: apiBaseUrl,
+    userPoolId: userPoolId,
+    region: region,
+  );
 }
 
 class MyApp extends StatelessWidget {

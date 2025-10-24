@@ -37,10 +37,15 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success) {
       context.go('/home');
     } else {
+      if (authProvider.error != null) {
+        debugPrint('Authentication error: ${authProvider.error}');
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Login failed'),
+        const SnackBar(
+          content: Text('Login failed'),
           backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
         ),
       );
     }
@@ -76,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    
+
                     // Title
                     Text(
                       'Welcome Back',
@@ -149,7 +154,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     Consumer<AuthProvider>(
                       builder: (context, authProvider, _) {
                         return ElevatedButton(
-                          onPressed: authProvider.isLoading ? null : _handleLogin,
+                          onPressed:
+                              authProvider.isLoading ? null : _handleLogin,
                           child: authProvider.isLoading
                               ? const SizedBox(
                                   height: 20,

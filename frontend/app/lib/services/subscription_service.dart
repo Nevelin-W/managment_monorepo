@@ -2,9 +2,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/subscription_model.dart';
+import '../config/app_config.dart';
 
 class SubscriptionService {
-  static const String baseUrl = 'https://your-api-endpoint.com/api';
   final storage = const FlutterSecureStorage();
 
   Future<String?> _getToken() async {
@@ -16,7 +16,7 @@ class SubscriptionService {
     
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/subscriptions'),
+        Uri.parse(AppConfig.subscriptionsUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
 
@@ -36,7 +36,7 @@ class SubscriptionService {
     
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/subscriptions'),
+        Uri.parse(AppConfig.subscriptionsUrl),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ class SubscriptionService {
     
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/subscriptions/${subscription.id}'),
+        Uri.parse(AppConfig.subscriptionByIdUrl(subscription.id)),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -80,7 +80,7 @@ class SubscriptionService {
     
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/subscriptions/$id'),
+        Uri.parse(AppConfig.subscriptionByIdUrl(id)),
         headers: {'Authorization': 'Bearer $token'},
       );
 
