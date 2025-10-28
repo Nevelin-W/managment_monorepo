@@ -63,6 +63,24 @@ variable "lambda_auth_me_name" {
   type        = string
 }
 
+variable "lambda_auth_confirm_name" {
+  description = "Auth confirm Lambda function name"
+  type        = string
+}
+variable "lambda_auth_confirm_invoke_arn" {
+  description = "Auth confirm Lambda invoke ARN"
+  type        = string
+}
+
+variable "lambda_auth_resend_code_name" {
+  description = "Auth resend code Lambda function name"
+  type        = string
+}
+variable "lambda_auth_resend_code_invoke_arn" {
+  description = "Auth resend code Lambda invoke ARN"
+  type        = string
+}
+
 variable "lambda_subs_list_name" {
   description = "Subscriptions list Lambda function name"
   type        = string

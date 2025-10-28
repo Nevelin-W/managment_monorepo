@@ -18,6 +18,23 @@ output "auth_me_invoke_arn" {
   value = aws_lambda_function.auth_me.invoke_arn
 }
 
+output "auth_confirm_name" {
+  value = aws_lambda_function.auth_confirm.function_name
+}
+
+output "auth_confirm_invoke_arn" {
+  value = aws_lambda_function.auth_confirm.invoke_arn
+  
+}
+
+output "auth_resend_code_name" {
+  value = aws_lambda_function.auth_resend_code.function_name
+}
+
+output "auth_resend_code_invoke_arn" {
+  value = aws_lambda_function.auth_resend_code.invoke_arn
+}
+
 output "auth_me_name" {
   value = aws_lambda_function.auth_me.function_name
 }

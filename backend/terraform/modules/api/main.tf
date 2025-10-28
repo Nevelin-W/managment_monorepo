@@ -33,7 +33,7 @@ resource "aws_api_gateway_resource" "auth_login" {
 }
 
 module "auth_login_cors" {
-  source = "../api_cors"
+  source      = "../api_cors"
   rest_api_id = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.auth_login.id
 }
@@ -62,7 +62,7 @@ resource "aws_api_gateway_resource" "auth_signup" {
 }
 
 module "auth_signup_cors" {
-  source = "../api_cors"
+  source      = "../api_cors"
   rest_api_id = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.auth_signup.id
 }
@@ -91,7 +91,7 @@ resource "aws_api_gateway_resource" "auth_me" {
 }
 
 module "auth_me_cors" {
-  source = "../api_cors"
+  source      = "../api_cors"
   rest_api_id = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.auth_me.id
 }
@@ -113,6 +113,64 @@ resource "aws_api_gateway_integration" "auth_me" {
   uri                     = var.lambda_auth_me_arn
 }
 
+# /auth/confirm
+resource "aws_api_gateway_resource" "auth_confirm" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.auth.id
+  path_part   = "confirm"
+}
+
+module "auth_confirm_cors" {
+  source      = "../api_cors"
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.auth_confirm.id
+}
+
+resource "aws_api_gateway_method" "auth_confirm_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.auth_confirm.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "auth_confirm" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.auth_confirm.id
+  http_method             = aws_api_gateway_method.auth_confirm_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_auth_confirm_invoke_arn
+}
+
+# /auth/resend-code
+resource "aws_api_gateway_resource" "auth_resend_code" {
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  parent_id   = aws_api_gateway_resource.auth.id
+  path_part   = "resend-code"
+}
+
+module "auth_resend_code_cors" {
+  source      = "../api_cors"
+  rest_api_id = aws_api_gateway_rest_api.main.id
+  resource_id = aws_api_gateway_resource.auth_resend_code.id
+}
+
+resource "aws_api_gateway_method" "auth_resend_code_post" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  resource_id   = aws_api_gateway_resource.auth_resend_code.id
+  http_method   = "POST"
+  authorization = "NONE"
+}
+
+resource "aws_api_gateway_integration" "auth_resend_code" {
+  rest_api_id             = aws_api_gateway_rest_api.main.id
+  resource_id             = aws_api_gateway_resource.auth_resend_code.id
+  http_method             = aws_api_gateway_method.auth_resend_code_post.http_method
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = var.lambda_auth_resend_code_invoke_arn
+}
+
 # === SUBSCRIPTION ROUTES ===
 
 # /subscriptions
@@ -123,7 +181,7 @@ resource "aws_api_gateway_resource" "subscriptions" {
 }
 
 module "subscriptions_cors" {
-  source = "../api_cors"
+  source      = "../api_cors"
   rest_api_id = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.subscriptions.id
 }
@@ -170,7 +228,7 @@ resource "aws_api_gateway_resource" "subscription_id" {
 }
 
 module "subscription_id_cors" {
-  source = "../api_cors"
+  source      = "../api_cors"
   rest_api_id = aws_api_gateway_rest_api.main.id
   resource_id = aws_api_gateway_resource.subscription_id.id
 }
@@ -212,13 +270,15 @@ resource "aws_api_gateway_integration" "subs_delete" {
 # Lambda Permissions
 resource "aws_lambda_permission" "api_gateway" {
   for_each = {
-    auth_login  = { function_name = var.lambda_auth_login_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    auth_signup = { function_name = var.lambda_auth_signup_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    auth_me     = { function_name = var.lambda_auth_me_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_list   = { function_name = var.lambda_subs_list_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_create = { function_name = var.lambda_subs_create_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_update = { function_name = var.lambda_subs_update_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_delete = { function_name = var.lambda_subs_delete_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_login       = { function_name = var.lambda_auth_login_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_signup      = { function_name = var.lambda_auth_signup_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_me          = { function_name = var.lambda_auth_me_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_confirm     = { function_name = var.lambda_auth_confirm_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_resend_code = { function_name = var.lambda_auth_resend_code_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_list        = { function_name = var.lambda_subs_list_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_create      = { function_name = var.lambda_subs_create_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_update      = { function_name = var.lambda_subs_update_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_delete      = { function_name = var.lambda_subs_delete_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"
@@ -239,6 +299,8 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_method.auth_login_post.id,
       aws_api_gateway_method.auth_signup_post.id,
       aws_api_gateway_method.auth_me_get.id,
+      aws_api_gateway_method.auth_confirm_post.id,
+      aws_api_gateway_method.auth_resend_code_post.id,
       aws_api_gateway_method.subs_list_get.id,
       aws_api_gateway_method.subs_create_post.id,
       aws_api_gateway_method.subs_update_put.id,
@@ -259,6 +321,8 @@ resource "aws_api_gateway_deployment" "main" {
     aws_api_gateway_integration.auth_login,
     aws_api_gateway_integration.auth_signup,
     aws_api_gateway_integration.auth_me,
+    aws_api_gateway_integration.auth_confirm,
+    aws_api_gateway_integration.auth_resend_code,
     aws_api_gateway_integration.subs_list,
     aws_api_gateway_integration.subs_create,
     aws_api_gateway_integration.subs_update,

@@ -51,22 +51,22 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<bool> signup(String email, String password, String name) async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  _isLoading = true;
+  _error = null;
+  notifyListeners();
 
-    try {
-      _user = await _authService.signup(email, password, name);
-      _isLoading = false;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _error = e.toString();
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
+  try {
+    final result = await _authService.signup(email, password, name);
+    _isLoading = false;
+    notifyListeners();
+    return result['success'] ?? false; // just return success
+  } catch (e) {
+    _error = e.toString();
+    _isLoading = false;
+    notifyListeners();
+    return false;
   }
+}
 
   Future<void> logout() async {
     await _authService.logout();

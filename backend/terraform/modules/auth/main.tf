@@ -1,21 +1,79 @@
 # Cognito User Pool
 resource "aws_cognito_user_pool" "main" {
-  name = "${var.project_name}-users-${var.environment}"
+  name = "${var.project_name}-user-pool-${var.environment}"
 
-  # Password Policy
-  password_policy {
-    minimum_length    = 8
-    require_lowercase = true
-    require_numbers   = true
-    require_symbols   = true
-    require_uppercase = true
+  # Email configuration
+  email_configuration {
+    email_sending_account = "COGNITO_DEFAULT"
   }
 
   # Auto-verified attributes
   auto_verified_attributes = ["email"]
 
-  # Username configuration
-  username_attributes = ["email"]
+  # Email verification message
+  verification_message_template {
+    default_email_option = "CONFIRM_WITH_CODE"
+    email_subject        = "Verify your email - ${var.project_name}"
+    email_message        = <<-EOT
+      <html>
+        <body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0;">Welcome to ${var.project_name}!</h1>
+          </div>
+          <div style="background: #f7fafc; padding: 30px; border-radius: 0 0 10px 10px;">
+            <p style="font-size: 16px; color: #2d3748; margin-bottom: 20px;">
+              Thank you for signing up! Please verify your email address to complete your registration.
+            </p>
+            <div style="background: white; padding: 20px; border-radius: 8px; text-align: center; margin: 30px 0;">
+              <p style="font-size: 14px; color: #718096; margin-bottom: 10px;">Your verification code:</p>
+              <h2 style="font-size: 32px; color: #667eea; letter-spacing: 5px; margin: 10px 0;">{####}</h2>
+            </div>
+            <p style="font-size: 14px; color: #718096; margin-top: 30px;">
+              This code will expire in 24 hours. If you didn't sign up for ${var.project_name}, please ignore this email.
+            </p>
+          </div>
+          <div style="text-align: center; padding: 20px; color: #a0aec0; font-size: 12px;">
+            <p>© ${formatdate("YYYY", timestamp())} ${var.project_name}. All rights reserved.</p>
+          </div>
+        </body>
+      </html>
+    EOT
+  }
+
+  # User attribute schema
+  schema {
+    name                = "email"
+    attribute_data_type = "String"
+    mutable            = true
+    required           = true
+
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 256
+    }
+  }
+
+  schema {
+    name                = "name"
+    attribute_data_type = "String"
+    mutable            = true
+    required           = true
+
+    string_attribute_constraints {
+      min_length = 1
+      max_length = 256
+    }
+  }
+
+  # Password policy
+  password_policy {
+    minimum_length                   = 8
+    require_lowercase                = true
+    require_numbers                  = true
+    require_symbols                  = false
+    require_uppercase                = true
+    temporary_password_validity_days = 7
+  }
 
   # Account recovery
   account_recovery_setting {
@@ -25,28 +83,9 @@ resource "aws_cognito_user_pool" "main" {
     }
   }
 
-  # Email configuration
-  email_configuration {
-    email_sending_account = "COGNITO_DEFAULT"  # Cost-free option
-  }
-
-  # Schema
-  schema {
-    name                = "email"
-    attribute_data_type = "String"
-    required            = true
-    mutable             = false
-  }
-
-  schema {
-    name                = "name"
-    attribute_data_type = "String"
-    required            = true
-    mutable             = true
-  }
-
   tags = {
     Name = "${var.project_name}-user-pool-${var.environment}"
+    Environment = "${var.environment}"
   }
 }
 

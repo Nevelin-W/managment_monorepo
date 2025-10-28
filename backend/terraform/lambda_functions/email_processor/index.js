@@ -57,7 +57,7 @@ async function processEmailContent(event) {
   // Placeholder for email parsing logic
   // In production, this would:
   // 1. Extract text from email body
-  // 2. Call AI API (Claude/GPT) to extract structured data
+  // 2. Call AI API (Claude/GPT) to extract structured data(idk man do i want ai?)
   // 3. Return parsed subscription info
   
   return null;

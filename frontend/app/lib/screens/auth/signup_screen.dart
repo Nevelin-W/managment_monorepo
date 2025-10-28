@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
+import '../../services/auth_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -12,12 +11,17 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _authService = AuthService();
+
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
+  bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String? _errorMessage;
 
   @override
   void dispose() {
@@ -28,28 +32,60 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
+  // Validation methods
+  String? _validateEmail(String? value) {
+    if (value == null || value.isEmpty) return 'Please enter your email';
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value)) return 'Please enter a valid email';
+    return null;
+  }
+
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) return 'Please enter a password';
+    if (value.length < 8) return 'Password must be at least 8 characters';
+    if (!value.contains(RegExp(r'[A-Z]'))) return 'Password must contain an uppercase letter';
+    if (!value.contains(RegExp(r'[a-z]'))) return 'Password must contain a lowercase letter';
+    if (!value.contains(RegExp(r'[0-9]'))) return 'Password must contain a number';
+    return null;
+  }
+
+  String? _validateConfirmPassword(String? value) {
+    if (value == null || value.isEmpty) return 'Please confirm your password';
+    if (value != _passwordController.text) return 'Passwords do not match';
+    return null;
+  }
+
   Future<void> _handleSignup() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final authProvider = context.read<AuthProvider>();
-    final success = await authProvider.signup(
-      _emailController.text.trim(),
-      _passwordController.text,
-      _nameController.text.trim(),
-    );
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-    if (!mounted) return;
-
-    if (success) {
-      context.go('/home');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(authProvider.error ?? 'Signup failed'),
-          backgroundColor: Colors.red,
-        ),
+    try {
+      await _authService.signup(
+        _emailController.text.trim(),
+        _passwordController.text,
+        _nameController.text.trim(),
       );
+
+      if (!mounted) return;
+
+      // GoRouter navigation to verification screen
+      context.go('/email-verification', extra: {
+        'email': _emailController.text.trim(),
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
     }
+  }
+
+  void _goToLogin() {
+    if (!_isLoading) context.go('/login');
   }
 
   @override
@@ -82,7 +118,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    
+
                     // Title
                     Text(
                       'Create Account',
@@ -99,43 +135,33 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     const SizedBox(height: 48),
 
-                    // Name Field
+                    // Name field
                     TextFormField(
                       controller: _nameController,
                       decoration: const InputDecoration(
                         labelText: 'Full Name',
                         prefixIcon: Icon(Icons.person_outlined),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your name';
-                        }
-                        return null;
-                      },
+                      validator: (value) =>
+                          value == null || value.isEmpty ? 'Please enter your name' : null,
+                      enabled: !_isLoading,
                     ),
                     const SizedBox(height: 16),
 
-                    // Email Field
+                    // Email field
                     TextFormField(
                       controller: _emailController,
-                      keyboardType: TextInputType.emailAddress,
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         prefixIcon: Icon(Icons.email_outlined),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
+                      keyboardType: TextInputType.emailAddress,
+                      validator: _validateEmail,
+                      enabled: !_isLoading,
                     ),
                     const SizedBox(height: 16),
 
-                    // Password Field
+                    // Password field
                     TextFormField(
                       controller: _passwordController,
                       obscureText: _obscurePassword,
@@ -148,26 +174,16 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
-                          },
+                          onPressed: () =>
+                              setState(() => _obscurePassword = !_obscurePassword),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter a password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
+                      validator: _validatePassword,
+                      enabled: !_isLoading,
                     ),
                     const SizedBox(height: 16),
 
-                    // Confirm Password Field
+                    // Confirm password
                     TextFormField(
                       controller: _confirmPasswordController,
                       obscureText: _obscureConfirmPassword,
@@ -180,48 +196,65 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
-                            });
-                          },
+                          onPressed: () => setState(
+                              () => _obscureConfirmPassword = !_obscureConfirmPassword),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please confirm your password';
-                        }
-                        if (value != _passwordController.text) {
-                          return 'Passwords do not match';
-                        }
-                        return null;
-                      },
+                      validator: _validateConfirmPassword,
+                      enabled: !_isLoading,
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Password hint
+                    Text(
+                      'Password must be at least 8 characters with uppercase, lowercase, and number',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.grey,
+                          ),
                     ),
                     const SizedBox(height: 24),
 
-                    // Signup Button
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, _) {
-                        return ElevatedButton(
-                          onPressed: authProvider.isLoading ? null : _handleSignup,
-                          child: authProvider.isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : const Text('Sign Up'),
-                        );
-                      },
+                    // Error message
+                    if (_errorMessage != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error_outline, color: Colors.red.shade700),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _errorMessage!,
+                                style: TextStyle(color: Colors.red.shade700),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // Sign Up button
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _handleSignup,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Text('Sign Up'),
                     ),
                     const SizedBox(height: 24),
 
-                    // Login Link
+                    // Login link
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -230,7 +263,7 @@ class _SignupScreenState extends State<SignupScreen> {
                           style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         TextButton(
-                          onPressed: () => context.go('/login'),
+                          onPressed: _goToLogin,
                           child: Text(
                             'Sign In',
                             style: TextStyle(

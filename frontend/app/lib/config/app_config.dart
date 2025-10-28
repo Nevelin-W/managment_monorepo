@@ -29,6 +29,8 @@ class AppConfig {
   // API Endpoints
   static String get authLoginUrl => '$apiBaseUrl/auth/login';
   static String get authSignupUrl => '$apiBaseUrl/auth/signup';
+  static String get authConfirmUrl => '$apiBaseUrl/auth/confirm';
+  static String get authResendCodeUrl => '$apiBaseUrl/auth/resend-code';
   static String get authMeUrl => '$apiBaseUrl/auth/me';
   static String get subscriptionsUrl => '$apiBaseUrl/subscriptions';
 

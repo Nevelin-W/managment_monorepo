@@ -38,21 +38,22 @@ class AuthService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final user = User.fromJson(data);
-        
+
         if (user.token != null) {
           await storage.write(key: 'auth_token', value: user.token);
         }
-        
+
         return user;
       } else {
-        throw Exception('Login failed: ${response.body}');
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Login failed');
       }
     } catch (e) {
       throw Exception('Login error: $e');
     }
   }
 
-  Future<User> signup(String email, String password, String name) async {
+  Future<Map<String, dynamic>> signup(String email, String password, String name) async {
     try {
       final response = await http.post(
         Uri.parse(AppConfig.authSignupUrl),
@@ -66,18 +67,59 @@ class AuthService {
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        final user = User.fromJson(data);
-        
-        if (user.token != null) {
-          await storage.write(key: 'auth_token', value: user.token);
-        }
-        
-        return user;
+        return {
+          'success': true,
+          'email': data['email'],
+          'message': data['message'],
+          'emailVerified': data['emailVerified'] ?? false,
+        };
       } else {
-        throw Exception('Signup failed: ${response.body}');
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Signup failed');
       }
     } catch (e) {
       throw Exception('Signup error: $e');
+    }
+  }
+
+  Future<bool> confirmEmail(String email, String code) async {
+    try {
+      final response = await http.post(
+        Uri.parse(AppConfig.authConfirmUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': email,
+          'code': code,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Email confirmation failed');
+      }
+    } catch (e) {
+      throw Exception('Confirmation error: $e');
+    }
+  }
+
+  Future<bool> resendCode(String email) async {
+    try {
+      final response = await http.post(
+        Uri.parse(AppConfig.authResendCodeUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': email}),
+      );
+
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to resend code');
+      }
+    } catch (e) {
+      throw Exception('Resend code error: $e');
     }
   }
 

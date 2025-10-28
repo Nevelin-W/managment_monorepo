@@ -81,7 +81,9 @@ resource "aws_iam_role_policy" "lambda_cognito" {
           "cognito-idp:AdminCreateUser",
           "cognito-idp:AdminSetUserPassword",
           "cognito-idp:AdminGetUser",
-          "cognito-idp:AdminConfirmSignUp"
+          "cognito-idp:AdminConfirmSignUp",
+          "cognito-idp:AdminUpdateUserAttributes"
+
         ]
         Resource = "*"
       }
@@ -158,6 +160,48 @@ resource "aws_lambda_function" "auth_me" {
     variables = {
       USERS_TABLE = var.users_table_name
       ENVIRONMENT = var.environment
+    }
+  }
+
+  layers = [aws_lambda_layer_version.dependencies.arn]
+}
+
+# Auth - Confirm Email Lambda
+resource "aws_lambda_function" "auth_confirm" {
+  filename      = "${path.module}/../../lambda_functions/auth/confirm_signup/function.zip"
+  function_name = "${var.project_name}-auth-confirm-${var.environment}"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+  memory_size   = 256
+
+  environment {
+    variables = {
+      USER_POOL_ID        = var.user_pool_id
+      USER_POOL_CLIENT_ID = var.user_pool_client_id
+      USERS_TABLE         = var.users_table_name
+      ENVIRONMENT         = var.environment
+    }
+  }
+
+  layers = [aws_lambda_layer_version.dependencies.arn]
+}
+
+# Auth - Resend Code Lambda
+resource "aws_lambda_function" "auth_resend_code" {
+  filename      = "${path.module}/../../lambda_functions/auth/resend_code/function.zip"
+  function_name = "${var.project_name}-auth-resend-code-${var.environment}"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+  memory_size   = 128
+
+  environment {
+    variables = {
+      USER_POOL_CLIENT_ID = var.user_pool_client_id
+      ENVIRONMENT         = var.environment
     }
   }
 
@@ -276,6 +320,8 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
     subs_update     = aws_lambda_function.subs_update.function_name
     subs_delete     = aws_lambda_function.subs_delete.function_name
     email_processor = aws_lambda_function.email_processor.function_name
+    auth_confirm_logs = aws_lambda_function.auth_confirm.function_name
+    auth_resend_code_logs = aws_lambda_function.auth_resend_code.function_name
   }
 
   name              = "/aws/lambda/${each.value}"
