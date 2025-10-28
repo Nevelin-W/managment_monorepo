@@ -4,13 +4,13 @@ resource "aws_dynamodb_table" "users" {
   billing_mode = "PAY_PER_REQUEST"  # Cost-optimized: pay only for what you use
   hash_key     = "email"
 
-  #   global_secondary_index {
-  #   name            = "email-index"
-  #   hash_key        = "email"
-  #   projection_type = "ALL"
-  #   read_capacity   = 5
-  #   write_capacity  = 5
-  # }
+    global_secondary_index {
+    name            = "email-index"
+    hash_key        = "email"
+    projection_type = "ALL"
+    read_capacity   = 5
+    write_capacity  = 5
+  }
 
   attribute {
     name = "email"

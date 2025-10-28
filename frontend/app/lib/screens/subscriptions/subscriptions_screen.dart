@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/subscription_provider.dart';
+import '../../widgets/add_subscription_dialog.dart';
 
 class SubscriptionsScreen extends StatelessWidget {
   const SubscriptionsScreen({super.key});
+
+  void _showAddSubscriptionDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const AddSubscriptionDialog(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +49,18 @@ class SubscriptionsScreen extends StatelessWidget {
                             color: Colors.grey,
                           ),
                       textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () => _showAddSubscriptionDialog(context),
+                      icon: const Icon(Icons.add),
+                      label: const Text('Add Subscription'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -93,6 +113,7 @@ class SubscriptionsScreen extends StatelessWidget {
                   ),
                   trailing: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
+                    mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
@@ -102,7 +123,6 @@ class SubscriptionsScreen extends StatelessWidget {
                               color: Theme.of(context).colorScheme.primary,
                             ),
                       ),
-                      const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -132,11 +152,7 @@ class SubscriptionsScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add subscription feature coming soon!')),
-          );
-        },
+        onPressed: () => _showAddSubscriptionDialog(context),
         child: const Icon(Icons.add),
       ),
     );

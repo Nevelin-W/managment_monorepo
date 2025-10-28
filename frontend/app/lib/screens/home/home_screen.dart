@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/subscription_provider.dart';
+import '../../widgets/add_subscription_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +19,13 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SubscriptionProvider>().fetchSubscriptions();
     });
+  }
+
+  void _showAddSubscriptionDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const AddSubscriptionDialog(),
+    );
   }
 
   @override
@@ -136,6 +144,18 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                             textAlign: TextAlign.center,
                           ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _showAddSubscriptionDialog,
+                            icon: const Icon(Icons.add),
+                            label: const Text('Add Subscription'),
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 16,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -181,12 +201,7 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Add subscription dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Add subscription feature coming soon!')),
-          );
-        },
+        onPressed: _showAddSubscriptionDialog,
         icon: const Icon(Icons.add),
         label: const Text('Add Subscription'),
       ),

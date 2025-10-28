@@ -14,6 +14,7 @@ resource "aws_api_gateway_authorizer" "cognito" {
   type          = "COGNITO_USER_POOLS"
   rest_api_id   = aws_api_gateway_rest_api.main.id
   provider_arns = [var.user_pool_arn]
+  # identity_source = "method.request.header.Authorization"
 }
 
 # === AUTH ROUTES ===
@@ -288,7 +289,6 @@ resource "aws_lambda_permission" "api_gateway" {
   source_arn    = each.value.source_arn
 }
 
-# API Deployment
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.main.id
 
@@ -305,9 +305,20 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_method.subs_create_post.id,
       aws_api_gateway_method.subs_update_put.id,
       aws_api_gateway_method.subs_delete_delete.id,
+      aws_api_gateway_integration.auth_login.id,
+      aws_api_gateway_integration.auth_signup.id,
+      aws_api_gateway_integration.auth_me.id,
+      aws_api_gateway_integration.auth_confirm.id,
+      aws_api_gateway_integration.auth_resend_code.id,
+      aws_api_gateway_integration.subs_list.id,
+      aws_api_gateway_integration.subs_create.id,
+      aws_api_gateway_integration.subs_update.id,
+      aws_api_gateway_integration.subs_delete.id,
       module.auth_login_cors,
       module.auth_signup_cors,
       module.auth_me_cors,
+      module.auth_confirm_cors,
+      module.auth_resend_code_cors,
       module.subscriptions_cors,
       module.subscription_id_cors,
     ]))
@@ -330,6 +341,8 @@ resource "aws_api_gateway_deployment" "main" {
     module.auth_login_cors,
     module.auth_signup_cors,
     module.auth_me_cors,
+    module.auth_confirm_cors,
+    module.auth_resend_code_cors,
     module.subscriptions_cors,
     module.subscription_id_cors,
   ]
@@ -372,5 +385,15 @@ resource "aws_api_gateway_method_settings" "all" {
     metrics_enabled    = true
     logging_level      = "INFO"
     data_trace_enabled = var.environment == "dev"
+  }
+}
+
+
+resource "aws_api_gateway_gateway_response" "unauthorized" {
+  rest_api_id   = aws_api_gateway_rest_api.main.id
+  response_type = "UNAUTHORIZED"
+
+  response_parameters = {
+    "gatewayresponse.header.Access-Control-Allow-Origin" = "'*'"
   }
 }
