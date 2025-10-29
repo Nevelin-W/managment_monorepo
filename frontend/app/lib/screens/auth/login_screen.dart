@@ -147,6 +147,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         }
                         return null;
                       },
+                      textInputAction: TextInputAction
+                          .done, // 👈 makes Enter show “done” on keyboard
+                      onFieldSubmitted: (_) =>
+                          _handleLogin(), // 👈 triggers sign in on Enter
                     ),
                     const SizedBox(height: 24),
 
