@@ -145,7 +145,7 @@ class SubscriptionsScreen extends StatelessWidget {
                         backgroundColor: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.1),
+                            .withValues(alpha: 0.1),
                         child: Icon(
                           Icons.subscriptions,
                           color: Theme.of(context).colorScheme.primary,
@@ -178,8 +178,8 @@ class SubscriptionsScreen extends StatelessWidget {
                                   ),
                                   decoration: BoxDecoration(
                                     color: sub.isActive
-                                        ? Colors.green.withOpacity(0.1)
-                                        : Colors.red.withOpacity(0.1),
+                                        ? Colors.green.withValues(alpha: 0.1)
+                                        : Colors.red.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -216,7 +216,7 @@ class SubscriptionsScreen extends StatelessWidget {
                                     color: Theme.of(context)
                                         .colorScheme
                                         .primary
-                                        .withOpacity(0.1),
+                                        .withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(8),
                                   ),
                                   child: Text(

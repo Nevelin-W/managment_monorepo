@@ -248,7 +248,7 @@ class _SplashScreenState extends State<SplashScreen>
                                     boxShadow: [
                                       BoxShadow(
                                         color: const Color(0xFF10B981)
-                                            .withOpacity(0.5),
+                                            .withValues(alpha: 0.5),
                                         blurRadius: 10,
                                       ),
                                     ],
@@ -260,7 +260,7 @@ class _SplashScreenState extends State<SplashScreen>
                                             controller.repeat())
                                     .shimmer(
                                       duration: 2000.ms,
-                                      color: Colors.white.withOpacity(0.3),
+                                      color: Colors.white.withValues(alpha: 0.3),
                                     );
                               },
                             ),
@@ -312,7 +312,7 @@ class _SplashScreenState extends State<SplashScreen>
                     radius: 1.0,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.5),
+                      Colors.black.withValues(alpha: 0.5),
                     ],
                   ),
                 ),
@@ -334,7 +334,7 @@ class _SplashScreenState extends State<SplashScreen>
           color: color,
           shadows: [
             Shadow(
-              color: const Color(0xFF10B981).withOpacity(0.5),
+              color: const Color(0xFF10B981).withValues(alpha: 0.5),
               blurRadius: 20,
             ),
           ],
@@ -372,7 +372,7 @@ class GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF10B981).withOpacity(0.1)
+      ..color = const Color(0xFF10B981).withValues(alpha: 0.1)
       ..strokeWidth = 1;
 
     for (double i = 0; i < size.width; i += 40) {
@@ -442,7 +442,7 @@ class PixelBearPainter extends CustomPainter {
   void drawPixel(Canvas canvas, int x, int y, Color color,
       {double opacity = 1.0}) {
     final paint = Paint()
-      ..color = color.withOpacity(opacity)
+      ..color = color.withValues(alpha: opacity)
       ..style = PaintingStyle.fill;
     canvas.drawRect(
       Rect.fromLTWH(x.toDouble() * pixelSize, y.toDouble() * pixelSize,

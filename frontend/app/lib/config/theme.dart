@@ -76,11 +76,9 @@ class AppTheme {
       primary: emeraldPrimary,
       secondary: emeraldLight,
       surface: surfaceDark,
-      background: backgroundDark,
       onPrimary: Colors.white,
       onSecondary: Colors.black,
       onSurface: Colors.white,
-      onBackground: Colors.white,
     ),
     scaffoldBackgroundColor: backgroundDark,
     textTheme: GoogleFonts.interTextTheme(
