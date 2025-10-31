@@ -56,15 +56,6 @@ class _AddSubscriptionDialogState extends State<AddSubscriptionDialog> {
     });
 
     try {
-      print('=== ADD SUBSCRIPTION DEBUG ===');
-      print('Name: ${_nameController.text.trim()}');
-      print('Amount: ${_amountController.text.trim()}');
-      print('Billing Cycle: $_selectedBillingCycle');
-      print('Next Billing Date: $_nextBillingDate');
-      print('Category: ${_categoryController.text.trim()}');
-      print('Description: ${_descriptionController.text.trim()}');
-      print('Is Active: $_isActive');
-
       final subscription = Subscription(
         id: '', // Backend will generate this
         name: _nameController.text.trim(),
@@ -80,12 +71,7 @@ class _AddSubscriptionDialogState extends State<AddSubscriptionDialog> {
         isActive: _isActive,
       );
 
-      print('Subscription object created: ${subscription.toJson()}');
-      print('Calling provider.addSubscription()...');
-
       await context.read<SubscriptionProvider>().addSubscription(subscription);
-
-      print('Provider.addSubscription() completed');
       
       // Check if there was an error in the provider
       final provider = context.read<SubscriptionProvider>();
@@ -101,12 +87,8 @@ class _AddSubscriptionDialogState extends State<AddSubscriptionDialog> {
             backgroundColor: Colors.green,
           ),
         );
-        print('=== ADD SUBSCRIPTION SUCCESS ===');
       }
     } catch (e) {
-      print('=== ADD SUBSCRIPTION ERROR ===');
-      print('Error: $e');
-      print('Error type: ${e.runtimeType}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

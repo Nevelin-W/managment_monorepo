@@ -24,7 +24,7 @@ dependencies:
   
   # Auth
   flutter_secure_storage: ^9.0.0
-  
+
   # UI
   google_fonts: ^6.1.0
   flutter_animate: ^4.3.0

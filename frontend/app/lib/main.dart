@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:logger/logger.dart';
 import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
@@ -11,6 +13,9 @@ void main() async {
   
   // Load configuration from build-time arguments
   loadConfig();
+  
+  // Configure global logging
+  configureLogging();
   
   runApp(const MyApp());
 }
@@ -29,6 +34,11 @@ void loadConfig() {
     'REGION',
     defaultValue: '',
   );
+  
+  const enableLogging = String.fromEnvironment(
+    'ENABLE_LOGGING',
+    defaultValue: 'false',
+  );
 
   // Validate that all required values are provided
   if (apiBaseUrl.isEmpty || userPoolId.isEmpty || region.isEmpty) {
@@ -43,7 +53,15 @@ void loadConfig() {
     apiBaseUrl: apiBaseUrl,
     userPoolId: userPoolId,
     region: region,
+    enableLogging: enableLogging == 'true',
   );
+}
+
+void configureLogging() {
+  if (kIsWeb && AppConfig.enableLogging) {
+    // For web, we need to ensure logs go to console
+    Logger.level = Level.debug;
+  }
 }
 
 class MyApp extends StatelessWidget {

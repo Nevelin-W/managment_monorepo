@@ -4,7 +4,7 @@ class AppConfig {
   static late final String apiBaseUrl;
   static late final String userPoolId;
   static late final String region;
-
+  static late bool enableLogging;
   static bool _initialized = false;
 
   /// Initialize the configuration with environment values
@@ -12,6 +12,7 @@ class AppConfig {
     required String apiBaseUrl,
     required String userPoolId,
     required String region,
+    bool enableLogging = false,
   }) {
     if (_initialized) {
       throw StateError('AppConfig has already been initialized');
@@ -20,6 +21,7 @@ class AppConfig {
     AppConfig.apiBaseUrl = apiBaseUrl;
     AppConfig.userPoolId = userPoolId;
     AppConfig.region = region;
+    AppConfig.enableLogging = enableLogging;
     _initialized = true;
   }
 

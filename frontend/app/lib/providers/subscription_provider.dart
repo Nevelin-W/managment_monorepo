@@ -1,13 +1,20 @@
 import 'package:flutter/foundation.dart';
+import 'package:logger/logger.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
+import '../utils/app_logger.dart';
 
 class SubscriptionProvider with ChangeNotifier {
   final SubscriptionService _service = SubscriptionService();
+  late final Logger logger;
   
   List<Subscription> _subscriptions = [];
   bool _isLoading = false;
   String? _error;
+
+  SubscriptionProvider() {
+    logger = AppLogger.createLogger('SubscriptionProvider');
+  }
 
   List<Subscription> get subscriptions => _subscriptions;
   bool get isLoading => _isLoading;
@@ -20,58 +27,41 @@ class SubscriptionProvider with ChangeNotifier {
   }
 
   Future<void> fetchSubscriptions() async {
-    print('=== FETCH SUBSCRIPTIONS PROVIDER ===');
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      print('Calling service.getSubscriptions()...');
       _subscriptions = await _service.getSubscriptions();
-      print('Fetched ${_subscriptions.length} subscriptions');
       _error = null;
     } catch (e) {
-      print('Error in fetchSubscriptions: $e');
+      logger.e('Failed to fetch subscriptions in provider', error: e);
       _error = e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
-      print('fetchSubscriptions completed. Error: $_error');
     }
   }
 
   Future<void> addSubscription(Subscription subscription) async {
-    print('=== ADD SUBSCRIPTION PROVIDER ===');
-    print('Subscription to add: ${subscription.toJson()}');
     _error = null;
     
     try {
-      print('Calling service.createSubscription()...');
       final newSub = await _service.createSubscription(subscription);
-      print('Service returned new subscription: ${newSub.toJson()}');
-      
       _subscriptions.add(newSub);
-      print('Added to local list. Total subscriptions: ${_subscriptions.length}');
-      
       notifyListeners();
-      print('notifyListeners() called');
       
       // Fetch fresh data to ensure sync
-      print('Fetching fresh subscription list...');
       await fetchSubscriptions();
-      
     } catch (e) {
-      print('Error in addSubscription provider: $e');
-      print('Error type: ${e.runtimeType}');
+      logger.e('Failed to add subscription in provider', error: e);
       _error = e.toString();
       notifyListeners();
-      rethrow; // Re-throw so the UI can handle it
+      rethrow;
     }
   }
 
   Future<void> updateSubscription(Subscription subscription) async {
-    print('=== UPDATE SUBSCRIPTION PROVIDER ===');
-    print('Subscription to update: ${subscription.toJson()}');
     _error = null;
     
     try {
@@ -79,13 +69,12 @@ class SubscriptionProvider with ChangeNotifier {
       final index = _subscriptions.indexWhere((s) => s.id == subscription.id);
       if (index != -1) {
         _subscriptions[index] = subscription;
-        print('Updated subscription at index $index');
         notifyListeners();
       } else {
-        print('Warning: Subscription with id ${subscription.id} not found in local list');
+        logger.w('Subscription not found in local state: ${subscription.id}');
       }
     } catch (e) {
-      print('Error in updateSubscription: $e');
+      logger.e('Failed to update subscription in provider', error: e);
       _error = e.toString();
       notifyListeners();
       rethrow;
@@ -93,17 +82,14 @@ class SubscriptionProvider with ChangeNotifier {
   }
 
   Future<void> deleteSubscription(String id) async {
-    print('=== DELETE SUBSCRIPTION PROVIDER ===');
-    print('Subscription ID to delete: $id');
     _error = null;
     
     try {
       await _service.deleteSubscription(id);
       _subscriptions.removeWhere((s) => s.id == id);
-      print('Removed subscription. Remaining: ${_subscriptions.length}');
       notifyListeners();
     } catch (e) {
-      print('Error in deleteSubscription: $e');
+      logger.e('Failed to delete subscription in provider', error: e);
       _error = e.toString();
       notifyListeners();
       rethrow;
