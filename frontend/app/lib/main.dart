@@ -1,12 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:logger/logger.dart';
 import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/subscription_provider.dart';
 import 'config/app_config.dart';
+import 'utils/app_talker.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,8 +14,8 @@ void main() async {
   // Load configuration from build-time arguments
   loadConfig();
   
-  // Configure global logging
-  configureLogging();
+  // Initialize Talker (replaces configureLogging)
+  AppTalker.initialize();
   
   runApp(const MyApp());
 }
@@ -55,13 +55,6 @@ void loadConfig() {
     region: region,
     enableLogging: enableLogging == 'true',
   );
-}
-
-void configureLogging() {
-  if (kIsWeb && AppConfig.enableLogging) {
-    // For web, we need to ensure logs go to console
-    Logger.level = Level.debug;
-  }
 }
 
 class MyApp extends StatelessWidget {

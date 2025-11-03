@@ -29,8 +29,9 @@ dependencies:
   google_fonts: ^6.1.0
   flutter_animate: ^4.3.0
 
-  # Logger
+  # Logging
   logger: ^2.0.0
+  talker: ^4.5.0
   
 dev_dependencies:
   flutter_test:

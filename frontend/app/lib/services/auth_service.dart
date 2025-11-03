@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import '../models/user_model.dart';
 import '../config/app_config.dart';
-import '../utils/app_logger.dart';
+import '../utils/app_talker.dart';
 
 // Platform-aware storage
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -12,10 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
   final _secureStorage = const FlutterSecureStorage();
-  late final Logger logger;
+  late final TalkerScope talker;
 
   AuthService() {
-    logger = AppLogger.createLogger('AuthService');
+    talker = AppTalker.createLogger('AuthService');
   }
 
   // Platform-aware storage methods
@@ -26,7 +25,7 @@ class AuthService {
     } else {
       await _secureStorage.write(key: key, value: value);
     }
-    logger.d('Stored token: $key');
+    talker.debug('Stored token: $key');
   }
 
   Future<String?> _readToken(String key) async {
@@ -38,7 +37,7 @@ class AuthService {
       token = await _secureStorage.read(key: key);
     }
     
-    logger.t('Read token [$key]: ${token != null ? "present" : "absent"}');
+    talker.debug('Read token [$key]: ${token != null ? "present" : "absent"}');
     return token;
   }
 
@@ -49,20 +48,20 @@ class AuthService {
     } else {
       await _secureStorage.delete(key: key);
     }
-    logger.d('Deleted token: $key');
+    talker.debug('Deleted token: $key');
   }
 
   Future<User?> getCurrentUser() async {
-    logger.d('Checking current user authentication');
+    talker.debug('Checking current user authentication');
     
     try {
       final token = await _readToken('auth_token');
       if (token == null) {
-        logger.d('No authentication token found');
+        talker.debug('No authentication token found');
         return null;
       }
 
-      logger.d('Validating token with server');
+      talker.debug('Validating token with server');
       final response = await http.get(
         Uri.parse(AppConfig.authMeUrl),
         headers: {'Authorization': 'Bearer $token'},
@@ -70,21 +69,21 @@ class AuthService {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        logger.i('User authenticated: ${AppLogger.sanitizeEmail(data['email'])}');
+        talker.info('User authenticated: ${AppTalker.sanitizeEmail(data['email'])}');
         return User.fromJson(data);
       }
       
-      logger.w('Token validation failed: ${response.statusCode}');
+      talker.warning('Token validation failed: ${response.statusCode}');
       await _deleteToken('auth_token');
       return null;
     } catch (e, stackTrace) {
-      logger.e('Authentication check failed', error: e, stackTrace: stackTrace);
+      talker.error('Authentication check failed', error: e, stackTrace: stackTrace);
       return null;
     }
   }
 
   Future<User> login(String email, String password) async {
-    logger.i('Login attempt for: ${AppLogger.sanitizeEmail(email)}');
+    talker.info('Login attempt for: ${AppTalker.sanitizeEmail(email)}');
     
     try {
       // Create the actual request body
@@ -95,7 +94,7 @@ class AuthService {
 
       // Log the request with sanitized password
       if (kDebugMode && AppConfig.enableLogging) {
-        logger.d('Request: email=$email, password=[REDACTED]');
+        talker.debug('Request: email=$email, password=[REDACTED]');
       }
 
       final response = await http.post(
@@ -104,14 +103,14 @@ class AuthService {
         body: requestBody,
       );
 
-      logger.d('Login response: ${response.statusCode}');
+      talker.debug('Login response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         
         if (data['idToken'] != null) {
           await _writeToken('auth_token', data['idToken']);
-          logger.i('ID token stored successfully');
+          talker.info('ID token stored successfully');
           
           // Validate token structure in debug mode only
           if (kDebugMode && AppConfig.enableLogging) {
@@ -120,14 +119,14 @@ class AuthService {
               if (parts.length == 3) {
                 final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
                 final claims = jsonDecode(payload);
-                logger.t('Token type: ${claims['token_use']}, Sub: ${claims['sub']?.substring(0, 8)}...');
+                talker.debug('Token type: ${claims['token_use']}, Sub: ${claims['sub']?.substring(0, 8)}...');
               }
             } catch (e) {
-              logger.w('Could not parse token structure');
+              talker.warning('Could not parse token structure');
             }
           }
         } else {
-          logger.e('No idToken in login response');
+          talker.error('No idToken in login response');
           throw Exception('Invalid login response: missing idToken');
         }
         
@@ -141,21 +140,21 @@ class AuthService {
         }
 
         final user = User.fromJson(data);
-        logger.i('Login successful for: ${AppLogger.sanitizeEmail(user.email)}');
+        talker.info('Login successful for: ${AppTalker.sanitizeEmail(user.email)}');
         return user;
       } else {
         final error = jsonDecode(response.body);
-        logger.w('Login failed: ${error['error']}');
+        talker.warning('Login failed: ${error['error']}');
         throw Exception(error['error'] ?? 'Login failed');
       }
     } catch (e, stackTrace) {
-      logger.e('Login error', error: e, stackTrace: stackTrace);
+      talker.error('Login error', error: e, stackTrace: stackTrace);
       throw Exception('Login error: $e');
     }
   }
 
   Future<Map<String, dynamic>> signup(String email, String password, String name) async {
-    logger.i('Signup attempt for: ${AppLogger.sanitizeEmail(email)}');
+    talker.info('Signup attempt for: ${AppTalker.sanitizeEmail(email)}');
     
     try {
       // Create the actual request body
@@ -167,7 +166,7 @@ class AuthService {
 
       // Log the request with sanitized password
       if (kDebugMode && AppConfig.enableLogging) {
-        logger.d('Request: email=$email, name=$name, password=[REDACTED]');
+        talker.debug('Request: email=$email, name=$name, password=[REDACTED]');
       }
 
       final response = await http.post(
@@ -176,11 +175,11 @@ class AuthService {
         body: requestBody,
       );
 
-      logger.d('Signup response: ${response.statusCode}');
+      talker.debug('Signup response: ${response.statusCode}');
 
       if (response.statusCode == 201) {
         final data = jsonDecode(response.body);
-        logger.i('Signup successful');
+        talker.info('Signup successful');
         return {
           'success': true,
           'email': data['email'],
@@ -189,17 +188,17 @@ class AuthService {
         };
       } else {
         final error = jsonDecode(response.body);
-        logger.w('Signup failed: ${error['error']}');
+        talker.warning('Signup failed: ${error['error']}');
         throw Exception(error['error'] ?? 'Signup failed');
       }
     } catch (e, stackTrace) {
-      logger.e('Signup error', error: e, stackTrace: stackTrace);
+      talker.error('Signup error', error: e, stackTrace: stackTrace);
       throw Exception('Signup error: $e');
     }
   }
 
   Future<bool> confirmEmail(String email, String code) async {
-    logger.i('Email confirmation for: ${AppLogger.sanitizeEmail(email)}');
+    talker.info('Email confirmation for: ${AppTalker.sanitizeEmail(email)}');
     
     try {
       final response = await http.post(
@@ -212,21 +211,21 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        logger.i('Email confirmed successfully');
+        talker.info('Email confirmed successfully');
         return true;
       } else {
         final error = jsonDecode(response.body);
-        logger.w('Email confirmation failed: ${error['error']}');
+        talker.warning('Email confirmation failed: ${error['error']}');
         throw Exception(error['error'] ?? 'Email confirmation failed');
       }
     } catch (e, stackTrace) {
-      logger.e('Confirmation error', error: e, stackTrace: stackTrace);
+      talker.error('Confirmation error', error: e, stackTrace: stackTrace);
       throw Exception('Confirmation error: $e');
     }
   }
 
   Future<bool> resendCode(String email) async {
-    logger.i('Resending code for: ${AppLogger.sanitizeEmail(email)}');
+    talker.info('Resending code for: ${AppTalker.sanitizeEmail(email)}');
     
     try {
       final response = await http.post(
@@ -236,24 +235,24 @@ class AuthService {
       );
 
       if (response.statusCode == 200) {
-        logger.i('Code resent successfully');
+        talker.info('Code resent successfully');
         return true;
       } else {
         final error = jsonDecode(response.body);
-        logger.w('Failed to resend code: ${error['error']}');
+        talker.warning('Failed to resend code: ${error['error']}');
         throw Exception(error['error'] ?? 'Failed to resend code');
       }
     } catch (e, stackTrace) {
-      logger.e('Resend code error', error: e, stackTrace: stackTrace);
+      talker.error('Resend code error', error: e, stackTrace: stackTrace);
       throw Exception('Resend code error: $e');
     }
   }
 
   Future<void> logout() async {
-    logger.i('User logout');
+    talker.info('User logout');
     await _deleteToken('auth_token');
     await _deleteToken('access_token');
     await _deleteToken('refresh_token');
-    logger.i('All tokens cleared');
+    talker.info('All tokens cleared');
   }
 }

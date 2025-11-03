@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
-import '../utils/app_logger.dart';
+import '../utils/app_talker.dart';
 
 class AuthProvider with ChangeNotifier {
   final AuthService _authService = AuthService();
-  late final Logger logger;
+  late final TalkerScope talker;
   
   User? _user;
   bool _isLoading = false;
@@ -18,7 +17,7 @@ class AuthProvider with ChangeNotifier {
   bool get isAuthenticated => _user != null;
 
   AuthProvider() {
-    logger = AppLogger.createLogger('AuthProvider');
+    talker = AppTalker.createLogger('AuthProvider');
     _checkAuthStatus();
   }
 
@@ -29,10 +28,10 @@ class AuthProvider with ChangeNotifier {
     try {
       _user = await _authService.getCurrentUser();
       if (_user != null) {
-        logger.i('User session restored: ${AppLogger.sanitizeEmail(_user!.email)}');
+        talker.info('User session restored: ${AppTalker.sanitizeEmail(_user!.email)}');
       }
-    } catch (e) {
-      logger.e('Error restoring session', error: e);
+    } catch (e, stackTrace) {
+      talker.error('Error restoring session', error: e, stackTrace: stackTrace);
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -50,8 +49,9 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return true;
-    } catch (e) {
-      logger.w('Login failed in provider', error: e);
+    } catch (e, stackTrace) {
+      talker.warning('Login failed in provider');
+      talker.error('Login error details', error: e, stackTrace: stackTrace);
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -70,8 +70,9 @@ class AuthProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
       return success;
-    } catch (e) {
-      logger.w('Signup failed in provider', error: e);
+    } catch (e, stackTrace) {
+      talker.warning('Signup failed in provider');
+      talker.error('Signup error details', error: e, stackTrace: stackTrace);
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -84,8 +85,8 @@ class AuthProvider with ChangeNotifier {
       await _authService.logout();
       _user = null;
       notifyListeners();
-    } catch (e) {
-      logger.e('Logout error in provider', error: e);
+    } catch (e, stackTrace) {
+      talker.error('Logout error in provider', error: e, stackTrace: stackTrace);
       // Clear user anyway
       _user = null;
       notifyListeners();

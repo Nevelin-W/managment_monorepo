@@ -1,19 +1,18 @@
 import 'package:flutter/foundation.dart';
-import 'package:logger/logger.dart';
 import '../models/subscription_model.dart';
 import '../services/subscription_service.dart';
-import '../utils/app_logger.dart';
+import '../utils/app_talker.dart';
 
 class SubscriptionProvider with ChangeNotifier {
   final SubscriptionService _service = SubscriptionService();
-  late final Logger logger;
+  late final TalkerScope talker;
   
   List<Subscription> _subscriptions = [];
   bool _isLoading = false;
   String? _error;
 
   SubscriptionProvider() {
-    logger = AppLogger.createLogger('SubscriptionProvider');
+    talker = AppTalker.createLogger('SubscriptionProvider');
   }
 
   List<Subscription> get subscriptions => _subscriptions;
@@ -34,8 +33,8 @@ class SubscriptionProvider with ChangeNotifier {
     try {
       _subscriptions = await _service.getSubscriptions();
       _error = null;
-    } catch (e) {
-      logger.e('Failed to fetch subscriptions in provider', error: e);
+    } catch (e, stackTrace) {
+      talker.error('Failed to fetch subscriptions in provider', error: e, stackTrace: stackTrace);
       _error = e.toString();
     } finally {
       _isLoading = false;
@@ -53,8 +52,8 @@ class SubscriptionProvider with ChangeNotifier {
       
       // Fetch fresh data to ensure sync
       await fetchSubscriptions();
-    } catch (e) {
-      logger.e('Failed to add subscription in provider', error: e);
+    } catch (e, stackTrace) {
+      talker.error('Failed to add subscription in provider', error: e, stackTrace: stackTrace);
       _error = e.toString();
       notifyListeners();
       rethrow;
@@ -71,10 +70,10 @@ class SubscriptionProvider with ChangeNotifier {
         _subscriptions[index] = subscription;
         notifyListeners();
       } else {
-        logger.w('Subscription not found in local state: ${subscription.id}');
+        talker.warning('Subscription not found in local state: ${subscription.id}');
       }
-    } catch (e) {
-      logger.e('Failed to update subscription in provider', error: e);
+    } catch (e, stackTrace) {
+      talker.error('Failed to update subscription in provider', error: e, stackTrace: stackTrace);
       _error = e.toString();
       notifyListeners();
       rethrow;
@@ -88,8 +87,8 @@ class SubscriptionProvider with ChangeNotifier {
       await _service.deleteSubscription(id);
       _subscriptions.removeWhere((s) => s.id == id);
       notifyListeners();
-    } catch (e) {
-      logger.e('Failed to delete subscription in provider', error: e);
+    } catch (e, stackTrace) {
+      talker.error('Failed to delete subscription in provider', error: e, stackTrace: stackTrace);
       _error = e.toString();
       notifyListeners();
       rethrow;
