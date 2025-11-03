@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../services/auth_service.dart';
 import 'package:go_router/go_router.dart';
+import '/widgets/bear_logo.dart';
 
 class EmailVerificationScreen extends StatefulWidget {
   final String email;
@@ -119,11 +120,9 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       color: primaryColor,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(
-                      Icons.email_outlined,
-                      size: 40,
-                      color: Colors.white,
-                    ),
+                    child: Center(
+                          child: BearLogo(width: 80, height: 80),
+                        ),
                   ),
                   const SizedBox(height: 32),
 
@@ -137,23 +136,33 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
 
                   // Subtitle
                   Text(
-                    'A 6-digit code has been sent to your email address:',
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Colors.grey,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
+  'A 6-digit code has been sent to your email',
+  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+        color: Colors.grey,
+      ),
+  textAlign: TextAlign.center,
+),
+const SizedBox(height: 8),
 
-                  // Email
-                  Text(
-                    widget.email,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: primaryColor,
-                        ),
-                    textAlign: TextAlign.center,
-                  ),
+// Email with label on same line
+RichText(
+  textAlign: TextAlign.center,
+  text: TextSpan(
+    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+          color: Colors.grey,
+        ),
+    children: [
+      const TextSpan(text: 'Address: '),
+      TextSpan(
+        text: widget.email,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: primaryColor,
+        ),
+      ),
+    ],
+  ),
+),
                   const SizedBox(height: 48),
 
                   // Code input

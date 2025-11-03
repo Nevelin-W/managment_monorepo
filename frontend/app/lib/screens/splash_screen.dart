@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/bear_logo.dart';
 import 'dart:math' as math;
 
 class SplashScreen extends StatefulWidget {
@@ -183,14 +184,9 @@ class _SplashScreenState extends State<SplashScreen>
                                       Color(0xFF10B981),
                                       BlendMode.modulate,
                                     ),
-                                    child: Opacity(
-                                      opacity: 0.7,
-                                      child: Image.asset(
-                                        'assets/images/pixel_bear.png',
-                                        width: 200,
-                                        height: 200,
-                                        filterQuality: FilterQuality.none,
-                                      ),
+                                    child: BearLogo(
+                                      width: 200,
+                                      height: 200,
                                     ),
                                   ),
                                 ),

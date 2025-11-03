@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
+import '/widgets/bear_logo.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -43,9 +44,12 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Please enter a password';
     if (value.length < 8) return 'Password must be at least 8 characters';
-    if (!value.contains(RegExp(r'[A-Z]'))) return 'Password must contain an uppercase letter';
-    if (!value.contains(RegExp(r'[a-z]'))) return 'Password must contain a lowercase letter';
-    if (!value.contains(RegExp(r'[0-9]'))) return 'Password must contain a number';
+    if (!value.contains(RegExp(r'[A-Z]')))
+      return 'Password must contain an uppercase letter';
+    if (!value.contains(RegExp(r'[a-z]')))
+      return 'Password must contain a lowercase letter';
+    if (!value.contains(RegExp(r'[0-9]')))
+      return 'Password must contain a number';
     return null;
   }
 
@@ -111,10 +115,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(20),
                       ),
-                      child: const Icon(
-                        Icons.subscriptions_outlined,
-                        size: 40,
-                        color: Colors.white,
+                      child: Center(
+                        child: BearLogo(width: 80, height: 80),
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -142,8 +144,9 @@ class _SignupScreenState extends State<SignupScreen> {
                         labelText: 'Full Name',
                         prefixIcon: Icon(Icons.person_outlined),
                       ),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? 'Please enter your name' : null,
+                      validator: (value) => value == null || value.isEmpty
+                          ? 'Please enter your name'
+                          : null,
                       enabled: !_isLoading,
                     ),
                     const SizedBox(height: 16),
@@ -174,8 +177,8 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                           ),
-                          onPressed: () =>
-                              setState(() => _obscurePassword = !_obscurePassword),
+                          onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
                         ),
                       ),
                       validator: _validatePassword,
@@ -196,8 +199,9 @@ class _SignupScreenState extends State<SignupScreen> {
                                 ? Icons.visibility_outlined
                                 : Icons.visibility_off_outlined,
                           ),
-                          onPressed: () => setState(
-                              () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                          onPressed: () => setState(() =>
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword),
                         ),
                       ),
                       validator: _validateConfirmPassword,
@@ -226,7 +230,8 @@ class _SignupScreenState extends State<SignupScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: Colors.red.shade700),
+                            Icon(Icons.error_outline,
+                                color: Colors.red.shade700),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -247,7 +252,8 @@ class _SignupScreenState extends State<SignupScreen> {
                               width: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
                           : const Text('Sign Up'),

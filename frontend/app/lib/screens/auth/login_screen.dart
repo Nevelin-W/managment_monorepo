@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '/widgets/bear_logo.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -60,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.all(24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
-              child:  AutofillGroup(
+              child: AutofillGroup(
                 child: Form(
                   key: _formKey,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
@@ -70,20 +71,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     children: [
                       // Logo
                       Container(
-                        width: 80,
+                        width: 40,
                         height: 80,
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Icon(
-                          Icons.subscriptions_outlined,
-                          size: 40,
-                          color: Colors.white,
+                        child: Center(
+                          child: BearLogo(width: 80, height: 80),
                         ),
                       ),
                       const SizedBox(height: 32),
-                
+
                       // Title
                       Text(
                         'Welcome Back',
@@ -99,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 48),
-                
+
                       // Email Field
                       TextFormField(
                         controller: _emailController,
@@ -120,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 16),
-                
+
                       // Password Field
                       TextFormField(
                         controller: _passwordController,
@@ -151,13 +150,11 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                           return null;
                         },
-                        textInputAction: TextInputAction
-                            .done,
-                        onFieldSubmitted: (_) =>
-                            _handleLogin(),
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _handleLogin(),
                       ),
                       const SizedBox(height: 24),
-                
+
                       // Login Button
                       Consumer<AuthProvider>(
                         builder: (context, authProvider, _) {
@@ -180,7 +177,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         },
                       ),
                       const SizedBox(height: 24),
-                
+
                       // Sign Up Link
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
