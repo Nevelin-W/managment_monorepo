@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
+import '../config/theme.dart';  // Import ThemeColors from here
 import '../widgets/bear_logo.dart';
-import 'dart:math' as math;
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,65 +15,51 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  bool _showGlitch = false;
-  late AnimationController _scaleController;
   late AnimationController _fadeController;
-  late Animation<double> _scaleAnimation;
+  late AnimationController _pulseController;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    
-    // Scale animation for bear
-    _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    );
-    
-    _scaleAnimation = Tween<double>(begin: 0.75, end: 1.0).animate(
-      CurvedAnimation(parent: _scaleController, curve: Curves.easeOutBack),
-    );
-    
-    // Single fade controller for all fade animations
+
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+
+    _fadeAnimation = CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    );
+
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
       CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeIn),
+        parent: _pulseController,
+        curve: Curves.easeInOut,
       ),
     );
-    
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _fadeController,
-        curve: const Interval(0.2, 1.0, curve: Curves.easeOut),
-      ),
-    );
-    
-    _scaleController.forward();
+
     _fadeController.forward();
-    _startGlitchEffect();
+    _pulseController.repeat(reverse: true);
     _navigateToNextScreen();
   }
 
   @override
   void dispose() {
-    _scaleController.dispose();
     _fadeController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   Future<void> _navigateToNextScreen() async {
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(milliseconds: 2500));
 
     if (!mounted) return;
 
@@ -85,210 +72,190 @@ class _SplashScreenState extends State<SplashScreen>
     }
   }
 
-  void _startGlitchEffect() {
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      _triggerRandomGlitch();
-    });
-  }
-
-  void _triggerRandomGlitch() {
-    if (!mounted) return;
-    if (math.Random().nextDouble() > 0.7) {
-      setState(() => _showGlitch = true);
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted) setState(() => _showGlitch = false);
-      });
-    }
-    Future.delayed(const Duration(seconds: 2), _triggerRandomGlitch);
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Get current theme colors from provider
+    final themeColors = context.watch<ThemeProvider>().themeColors;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF111827),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF111827),
-              Color(0xFF1F2937),
-              Color(0xFF111827),
+              themeColors.background,
+              themeColors.surface,
+              themeColors.background,
             ],
           ),
         ),
         child: Stack(
           children: [
-            // Static grid background - no animation
-            const Positioned.fill(
-              child: RepaintBoundary(
-                child: GridBackground(),
+            // Dynamic grid background
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.1,
+                child: CustomPaint(
+                  painter: GridPainter(color: themeColors.primary),
+                ),
               ),
             ),
 
-            // Static glow effects - simplified
-            Positioned(
-              top: MediaQuery.of(context).size.height * 0.25,
-              left: MediaQuery.of(context).size.width * 0.25,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF10B981).withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: MediaQuery.of(context).size.height * 0.25,
-              right: MediaQuery.of(context).size.width * 0.25,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF059669).withValues(alpha: 0.08),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
+            // Animated glow effects with theme colors
+            AnimatedBuilder(
+              animation: _pulseAnimation,
+              builder: (context, child) {
+                return Stack(
+                  children: [
+                    Positioned(
+                      top: MediaQuery.of(context).size.height * 0.2,
+                      left: MediaQuery.of(context).size.width * 0.15,
+                      child: Container(
+                        width: 250 * _pulseAnimation.value,
+                        height: 250 * _pulseAnimation.value,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              themeColors.primary
+                                  .withValues(alpha: 0.2 * _pulseAnimation.value),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: MediaQuery.of(context).size.height * 0.2,
+                      right: MediaQuery.of(context).size.width * 0.15,
+                      child: Container(
+                        width: 250 * _pulseAnimation.value,
+                        height: 250 * _pulseAnimation.value,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              themeColors.tertiary
+                                  .withValues(alpha: 0.15 * _pulseAnimation.value),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
 
             // Main content
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Pixel Bear - cached and optimized
-                  RepaintBoundary(
-                    child: ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: _showGlitch
-                          ? Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                Transform.translate(
-                                  offset: const Offset(-2, -2),
-                                  child: ColorFiltered(
-                                    colorFilter: const ColorFilter.mode(
-                                      Color(0xFF10B981),
-                                      BlendMode.modulate,
-                                    ),
-                                    child: BearLogo(
-                                      width: 200,
-                                      height: 200,
-                                    ),
-                                  ),
-                                ),
-                                Transform.translate(
-                                  offset: const Offset(2, 2),
-                                  child: ColorFiltered(
-                                    colorFilter: const ColorFilter.mode(
-                                      Colors.red,
-                                      BlendMode.modulate,
-                                    ),
-                                    child: Opacity(
-                                      opacity: 0.7,
-                                      child: Image.asset(
-                                        'assets/images/pixel_bear.png',
-                                        width: 200,
-                                        height: 200,
-                                        filterQuality: FilterQuality.none,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Image.asset(
-                                  'assets/images/pixel_bear.png',
-                                  width: 200,
-                                  height: 200,
-                                  filterQuality: FilterQuality.none,
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Bear Logo with themed styling
+                    AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _pulseAnimation.value,
+                          child: Container(
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  themeColors.primary.withValues(alpha: 0.2),
+                                  themeColors.tertiary.withValues(alpha: 0.15),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(40),
+                              border: Border.all(
+                                color: themeColors.primary.withValues(alpha: 0.4),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: themeColors.primary
+                                      .withValues(alpha: 0.4),
+                                  blurRadius: 40,
+                                  spreadRadius: 0,
                                 ),
                               ],
-                            )
-                          : Image.asset(
-                              'assets/images/pixel_bear.png',
-                              width: 200,
-                              height: 200,
-                              filterQuality: FilterQuality.none,
                             ),
+                            child: Center(
+                              child: BearLogo(
+                                width: 120,
+                                height: 120,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
-                  ),
 
-                  const SizedBox(height: 32),
+                    const SizedBox(height: 48),
 
-                  // Brand name - single animation controller
-                  RepaintBoundary(
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: SlideTransition(
-                        position: _slideAnimation,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            if (_showGlitch) ...[
-                              Transform.translate(
-                                offset: const Offset(-2, -2),
-                                child: Opacity(
-                                  opacity: 0.7,
-                                  child: _buildBrandText(const Color(0xFF10B981)),
-                                ),
-                              ),
-                              Transform.translate(
-                                offset: const Offset(2, 2),
-                                child: Opacity(
-                                  opacity: 0.7,
-                                  child: _buildBrandText(Colors.red),
-                                ),
-                              ),
-                            ],
-                            _buildBrandText(Colors.white),
+                    // Brand name with theme-colored accent
+                    ShaderMask(
+                      shaderCallback: (bounds) => LinearGradient(
+                        colors: [
+                          Colors.white,
+                          themeColors.primary,
+                          Colors.white,
+                        ],
+                        stops: const [0.0, 0.5, 1.0],
+                      ).createShader(bounds),
+                      child: Text.rich(
+                        TextSpan(
+                          style: const TextStyle(
+                            fontSize: 48,
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: -1,
+                          ),
+                          children: const [
+                            TextSpan(text: 'Bear'),
+                            TextSpan(
+                              text: 'Minimum',
+                              style: TextStyle(fontWeight: FontWeight.w300),
+                            ),
                           ],
                         ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Tagline - simplified animation
-                  RepaintBoundary(
-                    child: FadeTransition(
-                      opacity: _fadeAnimation,
-                      child: const Text(
-                        '> Just the essentials_',
-                        style: TextStyle(
-                          color: Color(0xFF10B981),
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                          letterSpacing: 2,
-                          fontWeight: FontWeight.w500,
-                        ),
+                    // Tagline with theme color
+                    Text(
+                      '> Just the essentials_',
+                      style: TextStyle(
+                        color: themeColors.primary,
+                        fontSize: 13,
+                        fontFamily: 'monospace',
+                        letterSpacing: 2,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                  ),
 
-                  const SizedBox(height: 48),
+                    const SizedBox(height: 64),
 
-                  // Loading bar
-                  const RepaintBoundary(
-                    child: LoadingBar(),
-                  ),
-                ],
+                    // Themed orbital loading indicator
+                    OrbitalLoadingIndicator(colors: themeColors),
+                  ],
+                ),
               ),
             ),
 
-            // Vignette effect - static
+            // Subtle vignette
             Positioned.fill(
               child: IgnorePointer(
                 child: DecoratedBox(
@@ -298,7 +265,7 @@ class _SplashScreenState extends State<SplashScreen>
                       radius: 1.0,
                       colors: [
                         Colors.transparent,
-                        Colors.black.withValues(alpha: 0.4),
+                        Colors.black.withValues(alpha: 0.3),
                       ],
                     ),
                   ),
@@ -310,140 +277,31 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
   }
-
-  Widget _buildBrandText(Color color) {
-    return Text.rich(
-      TextSpan(
-        style: TextStyle(
-          fontSize: 40,
-          fontFamily: 'monospace',
-          fontWeight: FontWeight.bold,
-          color: color,
-          shadows: const [
-            Shadow(
-              color: Color(0xFF10B981),
-              blurRadius: 15,
-            ),
-          ],
-        ),
-        children: const [
-          TextSpan(text: 'Bear'),
-          TextSpan(
-            text: 'Minimum',
-            style: TextStyle(fontWeight: FontWeight.w300),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-// Static grid background - no animations
-class GridBackground extends StatelessWidget {
-  const GridBackground({super.key});
+// Orbital loading indicator with custom colors
+class OrbitalLoadingIndicator extends StatefulWidget {
+  final ThemeColors colors;
+
+  const OrbitalLoadingIndicator({
+    super.key,
+    required this.colors,
+  });
 
   @override
-  Widget build(BuildContext context) {
-    return Opacity(
-      opacity: 0.15,
-      child: CustomPaint(
-        painter: GridPainter(),
-      ),
-    );
-  }
+  State<OrbitalLoadingIndicator> createState() =>
+      _OrbitalLoadingIndicatorState();
 }
 
-// Optimized loading bar - single animation controller
-class LoadingBar extends StatefulWidget {
-  const LoadingBar({super.key});
-
-  @override
-  State<LoadingBar> createState() => _LoadingBarState();
-}
-
-class _LoadingBarState extends State<LoadingBar>
+class _OrbitalLoadingIndicatorState extends State<OrbitalLoadingIndicator>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _progressAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       duration: const Duration(milliseconds: 2000),
-      vsync: this,
-    );
-    _progressAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeInOut,
-    );
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 192,
-          height: 12,
-          decoration: BoxDecoration(
-            color: const Color(0xFF374151),
-            border: Border.all(
-              color: const Color(0xFF4B5563),
-              width: 2,
-            ),
-          ),
-          child: AnimatedBuilder(
-            animation: _progressAnimation,
-            builder: (context, child) {
-              return Align(
-                alignment: Alignment.centerLeft,
-                child: Container(
-                  width: 192 * _progressAnimation.value,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xFF059669),
-                        Color(0xFF10B981),
-                        Color(0xFF34D399),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
-        const LoadingDots(),
-      ],
-    );
-  }
-}
-
-class LoadingDots extends StatefulWidget {
-  const LoadingDots({super.key});
-
-  @override
-  State<LoadingDots> createState() => _LoadingDotsState();
-}
-
-class _LoadingDotsState extends State<LoadingDots>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 1200),
       vsync: this,
     )..repeat();
   }
@@ -456,56 +314,119 @@ class _LoadingDotsState extends State<LoadingDots>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'LOADING',
-              style: TextStyle(
-                color: Color(0xFF10B981),
-                fontSize: 10,
-                fontFamily: 'monospace',
-                fontWeight: FontWeight.w500,
+    return SizedBox(
+      width: 80,
+      height: 80,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              // Orbital rings
+              for (int i = 0; i < 3; i++)
+                Transform.rotate(
+                  angle: (_controller.value * 6.28) + (i * 2.09),
+                  child: Container(
+                    width: 60 - (i * 15.0),
+                    height: 60 - (i * 15.0),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: _getRingColor(i).withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                ),
+              // Orbiting dots with different colors
+              for (int i = 0; i < 3; i++)
+                Transform.rotate(
+                  angle: (_controller.value * 6.28) + (i * 2.09),
+                  child: Transform.translate(
+                    offset: Offset(30 - (i * 7.5), 0),
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.white.withValues(alpha: 0.9),
+                            _getRingColor(i),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getRingColor(i).withValues(alpha: 0.8),
+                            blurRadius: 12,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              // Center pulse
+              Transform.scale(
+                scale: 1.0 + (0.2 * (1 - (_controller.value * 2 - 1).abs())),
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        widget.colors.primary,
+                        widget.colors.secondary,
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: widget.colors.primary.withValues(alpha: 0.8),
+                        blurRadius: 12,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-            _buildDot(0),
-            _buildDot(1),
-            _buildDot(2),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildDot(int index) {
-    final value = ((_controller.value * 3) - index).clamp(0.0, 1.0);
-    final opacity = (1 - (1 - value).abs()).clamp(0.0, 1.0);
-
-    return Text(
-      '.',
-      style: TextStyle(
-        color: Color.fromRGBO(16, 185, 129, opacity),
-        fontSize: 10,
-        fontFamily: 'monospace',
+            ],
+          );
+        },
       ),
     );
   }
+
+  Color _getRingColor(int index) {
+    switch (index) {
+      case 0:
+        return widget.colors.primary;
+      case 1:
+        return widget.colors.secondary;
+      case 2:
+        return widget.colors.tertiary;
+      default:
+        return widget.colors.primary;
+    }
+  }
 }
 
-// Grid painter - cached
+// Grid painter with custom color
 class GridPainter extends CustomPainter {
+  final Color color;
+
+  GridPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF10B981).withValues(alpha: 0.1)
+      ..color = color.withValues(alpha: 0.1)
       ..strokeWidth = 1
       ..isAntiAlias = false;
 
-    const step = 40.0;
-    
+    const step = 50.0;
+
     for (double i = 0; i < size.width; i += step) {
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
     }

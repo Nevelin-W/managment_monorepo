@@ -4,6 +4,7 @@ import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/subscription_provider.dart';
+import 'providers/theme_provider.dart';  // Add this import
 import 'config/app_config.dart';
 import 'utils/app_talker.dart';
 
@@ -63,16 +64,17 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),  // Add this first
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
-      child: Consumer<AuthProvider>(
-        builder: (context, authProvider, _) {
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
           return MaterialApp.router(
             title: 'Subscription Tracker',
             theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: ThemeMode.system,
+            darkTheme: themeProvider.themeData,  // Use theme from provider
+            themeMode: ThemeMode.dark,
             routerConfig: AppRouter.router,
             debugShowCheckedModeBanner: false,
           );

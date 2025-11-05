@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,8 +18,34 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  Timer? _emailDebounce;
+  Timer? _passwordDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _emailController.addListener(_onEmailChanged);
+    _passwordController.addListener(_onPasswordChanged);
+  }
+
+  void _onEmailChanged() {
+    _emailDebounce?.cancel();
+    _emailDebounce = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) _formKey.currentState?.validate();
+    });
+  }
+
+  void _onPasswordChanged() {
+    _passwordDebounce?.cancel();
+    _passwordDebounce = Timer(const Duration(milliseconds: 600), () {
+      if (mounted) _formKey.currentState?.validate();
+    });
+  }
+
   @override
   void dispose() {
+    _emailDebounce?.cancel();
+    _passwordDebounce?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -53,16 +81,18 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final themeColors = context.watch<ThemeProvider>().themeColors;
+    
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF111827),
-              Color(0xFF1F2937),
-              Color(0xFF111827),
+              themeColors.background,
+              themeColors.surface,
+              themeColors.background,
             ],
           ),
         ),
@@ -72,9 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
             Positioned.fill(
               child: Opacity(
                 opacity: 0.05,
-                child: CustomPaint(
-                  painter: GridPainter(),
-                ),
+                child: CustomPaint(painter: GridPainter(color: themeColors.primary)),
               ),
             ),
 
@@ -89,7 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFF10B981).withValues(alpha: 0.15),
+                      themeColors.primary.withValues(alpha: 0.15),
                       Colors.transparent,
                     ],
                   ),
@@ -106,7 +134,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFF059669).withValues(alpha: 0.1),
+                      themeColors.secondary.withValues(alpha: 0.1),
                       Colors.transparent,
                     ],
                   ),
@@ -114,7 +142,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
 
-            // Main content
             SafeArea(
               child: Center(
                 child: SingleChildScrollView(
@@ -124,18 +151,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Compact header section
-                        _buildHeader(),
-                        
+                        _buildHeader(themeColors),
                         const SizedBox(height: 48),
-
-                        // Login form card
-                        _buildLoginCard(),
-
+                        _buildLoginCard(themeColors),
                         const SizedBox(height: 24),
-
-                        // Sign up link
-                        _buildSignUpSection(),
+                        _buildSignUpSection(themeColors),
                       ],
                     ),
                   ),
@@ -148,7 +168,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(themeColors) {
     return Column(
       children: [
         Text.rich(
@@ -160,22 +180,20 @@ class _LoginScreenState extends State<LoginScreen> {
               color: Colors.white,
               letterSpacing: -0.5,
             ),
-            children: const [
-              TextSpan(text: 'Bear'),
+            children: [
+              const TextSpan(text: 'Bear'),
               TextSpan(
                 text: 'Minimum',
                 style: TextStyle(
                   fontWeight: FontWeight.w300,
-                  color: Color(0xFF10B981),
+                  color: themeColors.primary,
                 ),
               ),
             ],
           ),
           textAlign: TextAlign.center,
         ),
-        
         const SizedBox(height: 8),
-        
         const Text(
           '> Just the essentials_',
           style: TextStyle(
@@ -191,13 +209,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildLoginCard() {
+  Widget _buildLoginCard(themeColors) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937).withValues(alpha: 0.5),
+        color: themeColors.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: const Color(0xFF374151).withValues(alpha: 0.5),
+          color: Colors.white.withValues(alpha: 0.1),
           width: 1,
         ),
         boxShadow: [
@@ -216,8 +234,8 @@ class _LoginScreenState extends State<LoginScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                const Color(0xFF1F2937).withValues(alpha: 0.8),
-                const Color(0xFF111827).withValues(alpha: 0.9),
+                themeColors.surface.withValues(alpha: 0.8),
+                themeColors.background.withValues(alpha: 0.9),
               ],
             ),
           ),
@@ -225,16 +243,14 @@ class _LoginScreenState extends State<LoginScreen> {
           child: AutofillGroup(
             child: Form(
               key: _formKey,
-              autovalidateMode: AutovalidateMode.onUserInteraction,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Title section with border
                   Column(
                     children: [
-                      Text(
+                      const Text(
                         'Welcome Back',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 28,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -258,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           gradient: LinearGradient(
                             colors: [
                               Colors.transparent,
-                              const Color(0xFF10B981).withValues(alpha: 0.3),
+                              themeColors.primary.withValues(alpha: 0.3),
                               Colors.transparent,
                             ],
                           ),
@@ -266,54 +282,48 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  
                   const SizedBox(height: 32),
 
                   // Email Field
                   TextFormField(
                     controller: _emailController,
-                    autofillHints: [AutofillHints.email],
+                    autofillHints: const [AutofillHints.email],
                     keyboardType: TextInputType.emailAddress,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Email',
                       prefixIcon: Icon(
                         Icons.email_outlined,
-                        color: const Color(0xFF10B981).withValues(alpha: 0.7),
+                        color: themeColors.primary.withValues(alpha: 0.7),
                       ),
                       filled: true,
-                      fillColor: const Color(0xFF111827).withValues(alpha: 0.5),
+                      fillColor: themeColors.background.withValues(alpha: 0.5),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: const Color(0xFF374151).withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: const Color(0xFF374151).withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF10B981),
+                        borderSide: BorderSide(
+                          color: themeColors.primary,
                           width: 2,
                         ),
                       ),
                       errorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.red,
-                        ),
+                        borderSide: const BorderSide(color: Colors.red),
                       ),
                       focusedErrorBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.red,
-                          width: 2,
-                        ),
+                        borderSide: const BorderSide(color: Colors.red, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -326,20 +336,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
-                  
+
                   const SizedBox(height: 20),
 
                   // Password Field
                   TextFormField(
                     controller: _passwordController,
-                    autofillHints: [AutofillHints.password],
+                    autofillHints: const [AutofillHints.password],
                     obscureText: _obscurePassword,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: Icon(
                         Icons.lock_outlined,
-                        color: const Color(0xFF10B981).withValues(alpha: 0.7),
+                        color: themeColors.primary.withValues(alpha: 0.7),
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -349,44 +359,37 @@ class _LoginScreenState extends State<LoginScreen> {
                           color: Colors.grey[400],
                         ),
                         onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
+                          setState(() => _obscurePassword = !_obscurePassword);
                         },
                       ),
                       filled: true,
-                      fillColor: const Color(0xFF111827).withValues(alpha: 0.5),
+                      fillColor: themeColors.background.withValues(alpha: 0.5),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: const Color(0xFF374151).withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(
-                          color: const Color(0xFF374151).withValues(alpha: 0.5),
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Color(0xFF10B981),
+                        borderSide: BorderSide(
+                          color: themeColors.primary,
                           width: 2,
                         ),
                       ),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.red,
-                        ),
+                      errorBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide(color: Colors.red),
                       ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(
-                          color: Colors.red,
-                          width: 2,
-                        ),
+                      focusedErrorBorder: const OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(12)),
+                        borderSide: BorderSide(color: Colors.red, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -401,20 +404,19 @@ class _LoginScreenState extends State<LoginScreen> {
                     textInputAction: TextInputAction.done,
                     onFieldSubmitted: (_) => _handleLogin(),
                   ),
-                  
+
                   const SizedBox(height: 32),
 
-                  // Login Button
                   Consumer<AuthProvider>(
                     builder: (context, authProvider, _) {
                       return Container(
                         height: 52,
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             colors: [
-                              Color(0xFF059669),
-                              Color(0xFF10B981),
-                              Color(0xFF34D399),
+                              themeColors.secondary,
+                              themeColors.primary,
+                              themeColors.tertiary,
                             ],
                           ),
                           borderRadius: BorderRadius.circular(12),
@@ -422,7 +424,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? []
                               : [
                                   BoxShadow(
-                                    color: const Color(0xFF10B981)
+                                    color: themeColors.primary
                                         .withValues(alpha: 0.3),
                                     blurRadius: 12,
                                     offset: const Offset(0, 4),
@@ -430,7 +432,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                         ),
                         child: ElevatedButton(
-                          onPressed: authProvider.isLoading ? null : _handleLogin,
+                          onPressed:
+                              authProvider.isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.transparent,
                             shadowColor: Colors.transparent,
@@ -444,7 +447,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                    valueColor:
+                                        AlwaysStoppedAnimation<Color>(
                                       Colors.white,
                                     ),
                                   ),
@@ -471,14 +475,14 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSignUpSection() {
+  Widget _buildSignUpSection(themeColors) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1F2937).withValues(alpha: 0.3),
+        color: themeColors.surface.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: const Color(0xFF374151).withValues(alpha: 0.3),
+          color: Colors.white.withValues(alpha: 0.1),
         ),
       ),
       child: Row(
@@ -486,10 +490,7 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Text(
             "Don't have an account? ",
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey[400], fontSize: 14),
           ),
           TextButton(
             onPressed: () => context.go('/signup'),
@@ -498,10 +499,10 @@ class _LoginScreenState extends State<LoginScreen> {
               minimumSize: Size.zero,
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: const Text(
+            child: Text(
               'Sign Up',
               style: TextStyle(
-                color: Color(0xFF10B981),
+                color: themeColors.primary,
                 fontWeight: FontWeight.bold,
                 fontSize: 14,
               ),
@@ -513,17 +514,19 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Grid painter
 class GridPainter extends CustomPainter {
+  final Color color;
+
+  GridPainter({required this.color});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF10B981).withValues(alpha: 0.1)
+      ..color = color.withValues(alpha: 0.1)
       ..strokeWidth = 1
       ..isAntiAlias = false;
 
     const step = 40.0;
-    
     for (double i = 0; i < size.width; i += step) {
       canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
     }
