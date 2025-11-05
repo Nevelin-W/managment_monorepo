@@ -206,7 +206,7 @@ class _AddSubscriptionDialogState extends State<AddSubscriptionDialog> {
 
                   // Billing Cycle
                   DropdownButtonFormField<BillingCycle>(
-                    value: _selectedBillingCycle,
+                    initialValue: _selectedBillingCycle,
                     decoration: InputDecoration(
                       labelText: 'Billing Cycle *',
                       prefixIcon: const Icon(Icons.calendar_today),

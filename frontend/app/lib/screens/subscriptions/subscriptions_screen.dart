@@ -4,7 +4,6 @@ import '../../providers/subscription_provider.dart';
 import '../../widgets/add_subscription_dialog.dart';
 import '../../widgets/edit_subscription_dialog.dart';
 import '../../models/subscription_model.dart';
-import '/widgets/bear_logo.dart';
 
 class SubscriptionsScreen extends StatelessWidget {
   const SubscriptionsScreen({super.key});
