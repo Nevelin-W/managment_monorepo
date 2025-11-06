@@ -11,7 +11,6 @@ void main() {
   final pixelSize = 5;
   
   void drawPixel(int x, int y, int r, int g, int b, {double opacity = 1.0}) {
-    final color = img.ColorRgba8(r, g, b, (opacity * 255).round());
     for (int i = 0; i < pixelSize; i++) {
       for (int j = 0; j < pixelSize; j++) {
         final px = x * pixelSize + i;

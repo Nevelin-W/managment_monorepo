@@ -1,84 +1,85 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/subscription_model.dart';
 import '../config/app_config.dart';
-import '../utils/app_talker.dart';
+import '../utils/app_logger.dart';
 
 class SubscriptionService {
   final _secureStorage = const FlutterSecureStorage();
-  late final TalkerScope talker;
+  late final LoggerScope _log;
 
   SubscriptionService() {
-    talker = AppTalker.createLogger('SubscriptionService');
+    _log = AppLogger.scope('SubscriptionService');
   }
 
-  Future<String?> _getToken() async {
-    if (kIsWeb) {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString('auth_token');
-    } else {
-      return await _secureStorage.read(key: 'auth_token');
+  Future<String?> _readToken(String key) async {
+    try {
+      String? token;
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        token = prefs.getString(key);
+      } else {
+        token = await _secureStorage.read(key: key);
+      }
+      _log.debug('Token read', {'key': key, 'present': token != null});
+      return token;
+    } catch (e, stackTrace) {
+      _log.error('Failed to read token', error: e, stackTrace: stackTrace, context: {'key': key});
+      return null;
     }
   }
 
   Future<List<Subscription>> getSubscriptions() async {
-    talker.debug('Fetching subscriptions');
-    
-    final token = await _getToken();
+    _log.debug('Fetching subscriptions');
+    final token = await _readToken('auth_token');
+
     if (token == null) {
-      talker.error('No authentication token available');
+      _log.warning('No authentication token available');
       throw Exception('Authentication required');
     }
-    
-    // Log sanitized token for debugging
-    if (kDebugMode && AppConfig.enableLogging) {
-      talker.debug('Using token: ${AppTalker.sanitizeToken(token)}');
-    }
-    
+
     try {
       final response = await http.get(
         Uri.parse(AppConfig.subscriptionsUrl),
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      talker.debug('Response status: ${response.statusCode}');
+      _log.debug('Response received', {'statusCode': response.statusCode});
 
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        talker.info('Retrieved ${data.length} subscription(s)');
+        _log.info('Retrieved subscriptions', {'count': data.length});
         return data.map((json) => Subscription.fromJson(json)).toList();
       } else {
-        talker.warning('Failed to fetch subscriptions: ${response.statusCode}');
-        if (kDebugMode && AppConfig.enableLogging) {
-          talker.debug('Response body: ${AppTalker.sanitizeResponse(response.body)}');
+        _log.warning('Failed to fetch subscriptions', {'statusCode': response.statusCode});
+        if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
+          _log.debug('Response body: ${response.body}');
         }
         throw Exception('Failed to load subscriptions');
       }
     } catch (e, stackTrace) {
-      talker.error('Error fetching subscriptions', error: e, stackTrace: stackTrace);
+      _log.error('Error fetching subscriptions', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
   Future<Subscription> createSubscription(Subscription subscription) async {
-    talker.info('Creating subscription: ${subscription.name}');
-    
-    final token = await _getToken();
+    _log.info('Creating subscription', {'name': subscription.name});
+
+    final token = await _readToken('auth_token');
     if (token == null) {
-      talker.error('No authentication token available');
+      _log.warning('No authentication token available');
       throw Exception('Authentication required');
     }
-    
-    final subscriptionJson = subscription.toJson();
-    subscriptionJson.remove('id');
-    
-    if (kDebugMode && AppConfig.enableLogging) {
-      talker.debug('Subscription data: ${jsonEncode(subscriptionJson)}');
+
+    final subscriptionJson = subscription.toJson()..remove('id');
+    if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
+      _log.debug('Subscription payload', {'data': subscriptionJson});
     }
-    
+
     try {
       final response = await http.post(
         Uri.parse(AppConfig.subscriptionsUrl),
@@ -89,37 +90,37 @@ class SubscriptionService {
         body: jsonEncode(subscriptionJson),
       );
 
-      talker.debug('Response status: ${response.statusCode}');
+      _log.debug('Response received', {'statusCode': response.statusCode});
 
       if (response.statusCode == 201 || response.statusCode == 200) {
-        talker.info('Subscription created successfully');
+        _log.info('Subscription created successfully');
         return Subscription.fromJson(jsonDecode(response.body));
       } else {
-        talker.warning('Failed to create subscription: ${response.statusCode}');
-        if (kDebugMode && AppConfig.enableLogging) {
-          talker.debug('Response body: ${AppTalker.sanitizeResponse(response.body)}');
+        _log.warning('Failed to create subscription', {'statusCode': response.statusCode});
+        if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
+          _log.debug('Response body: ${response.body}');
         }
         throw Exception('Failed to create subscription');
       }
     } catch (e, stackTrace) {
-      talker.error('Error creating subscription', error: e, stackTrace: stackTrace);
+      _log.error('Error creating subscription', error: e, stackTrace: stackTrace, context: {'name': subscription.name});
       rethrow;
     }
   }
 
   Future<void> updateSubscription(Subscription subscription) async {
-    talker.info('Updating subscription: ${subscription.name}');
-    
-    final token = await _getToken();
+    _log.info('Updating subscription', {'id': subscription.id, 'name': subscription.name});
+
+    final token = await _readToken('auth_token');
     if (token == null) {
-      talker.error('No authentication token available');
+      _log.warning('No authentication token available');
       throw Exception('Authentication required');
     }
-    
-    if (kDebugMode && AppConfig.enableLogging) {
-      talker.debug('Subscription data: ${jsonEncode(subscription.toJson())}');
+
+    if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
+      _log.debug('Subscription update payload', {'data': subscription.toJson()});
     }
-    
+
     try {
       final response = await http.put(
         Uri.parse(AppConfig.subscriptionByIdUrl(subscription.id)),
@@ -130,51 +131,51 @@ class SubscriptionService {
         body: jsonEncode(subscription.toJson()),
       );
 
-      talker.debug('Response status: ${response.statusCode}');
+      _log.debug('Response received', {'statusCode': response.statusCode});
 
       if (response.statusCode == 200) {
-        talker.info('Subscription updated successfully');
+        _log.info('Subscription updated successfully');
       } else {
-        talker.warning('Failed to update subscription: ${response.statusCode}');
-        if (kDebugMode && AppConfig.enableLogging) {
-          talker.debug('Response body: ${AppTalker.sanitizeResponse(response.body)}');
+        _log.warning('Failed to update subscription', {'statusCode': response.statusCode});
+        if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
+          _log.debug('Response body: ${response.body}');
         }
         throw Exception('Failed to update subscription');
       }
     } catch (e, stackTrace) {
-      talker.error('Error updating subscription', error: e, stackTrace: stackTrace);
+      _log.error('Error updating subscription', error: e, stackTrace: stackTrace, context: {'id': subscription.id});
       rethrow;
     }
   }
 
   Future<void> deleteSubscription(String id) async {
-    talker.info('Deleting subscription: $id');
-    
-    final token = await _getToken();
+    _log.info('Deleting subscription', {'id': id});
+
+    final token = await _readToken('auth_token');
     if (token == null) {
-      talker.error('No authentication token available');
+      _log.warning('No authentication token available');
       throw Exception('Authentication required');
     }
-    
+
     try {
       final response = await http.delete(
         Uri.parse(AppConfig.subscriptionByIdUrl(id)),
         headers: {'Authorization': 'Bearer $token'},
       );
 
-      talker.debug('Response status: ${response.statusCode}');
+      _log.debug('Response received', {'statusCode': response.statusCode});
 
       if (response.statusCode == 200) {
-        talker.info('Subscription deleted successfully');
+        _log.info('Subscription deleted successfully', {'id': id});
       } else {
-        talker.warning('Failed to delete subscription: ${response.statusCode}');
-        if (kDebugMode && AppConfig.enableLogging) {
-          talker.debug('Response body: ${AppTalker.sanitizeResponse(response.body)}');
+        _log.warning('Failed to delete subscription', {'statusCode': response.statusCode});
+        if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
+          _log.debug('Response body: ${response.body}');
         }
         throw Exception('Failed to delete subscription');
       }
     } catch (e, stackTrace) {
-      talker.error('Error deleting subscription', error: e, stackTrace: stackTrace);
+      _log.error('Error deleting subscription', error: e, stackTrace: stackTrace, context: {'id': id});
       rethrow;
     }
   }

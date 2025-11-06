@@ -4,9 +4,9 @@ import 'config/theme.dart';
 import 'config/routes.dart';
 import 'providers/auth_provider.dart';
 import 'providers/subscription_provider.dart';
-import 'providers/theme_provider.dart';  // Add this import
+import 'providers/theme_provider.dart';
 import 'config/app_config.dart';
-import 'utils/app_talker.dart';
+import 'utils/app_logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,8 +14,8 @@ void main() async {
   // Load configuration from build-time arguments
   loadConfig();
   
-  // Initialize Talker (replaces configureLogging)
-  AppTalker.initialize();
+  // Initialize Logger (replaces AppTalker.initialize())
+  AppLogger.initialize();
   
   runApp(const MyApp());
 }
@@ -35,25 +35,25 @@ void loadConfig() {
     defaultValue: '',
   );
   
-  const enableLogging = String.fromEnvironment(
-    'ENABLE_LOGGING',
-    defaultValue: 'false',
+  const logLevelStr = String.fromEnvironment(
+    'LOG_LEVEL',
+    defaultValue: 'warning',
   );
 
   // Validate that all required values are provided
   if (apiBaseUrl.isEmpty || userPoolId.isEmpty || region.isEmpty) {
     throw Exception(
       'Missing required configuration. Please provide API_BASE_URL, USER_POOL_ID, and REGION as build arguments.\n'
-      'Example: flutter run --dart-define=API_BASE_URL=https://... --dart-define=USER_POOL_ID=... --dart-define=REGION=...'
+      'Example: flutter run --dart-define=API_BASE_URL=https://... --dart-define=USER_POOL_ID=... --dart-define=REGION=... --dart-define=LOG_LEVEL=info'
     );
   }
 
-  // Initialize AppConfig
+  // Initialize AppConfig with parsed log level
   AppConfig.initialize(
     apiBaseUrl: apiBaseUrl,
     userPoolId: userPoolId,
     region: region,
-    enableLogging: enableLogging == 'true',
+    logLevel: LogLevel.fromString(logLevelStr),
   );
 }
 
@@ -64,7 +64,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),  // Add this first
+        ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
@@ -73,7 +73,7 @@ class MyApp extends StatelessWidget {
           return MaterialApp.router(
             title: 'Subscription Tracker',
             theme: AppTheme.lightTheme,
-            darkTheme: themeProvider.themeData,  // Use theme from provider
+            darkTheme: themeProvider.themeData,
             themeMode: ThemeMode.dark,
             routerConfig: AppRouter.router,
             debugShowCheckedModeBanner: false,

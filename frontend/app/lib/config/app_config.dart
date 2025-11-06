@@ -4,7 +4,7 @@ class AppConfig {
   static late final String apiBaseUrl;
   static late final String userPoolId;
   static late final String region;
-  static late bool enableLogging;
+  static late final LogLevel logLevel;
   static bool _initialized = false;
 
   /// Initialize the configuration with environment values
@@ -12,7 +12,7 @@ class AppConfig {
     required String apiBaseUrl,
     required String userPoolId,
     required String region,
-    bool enableLogging = false,
+    LogLevel logLevel = LogLevel.warning,
   }) {
     if (_initialized) {
       throw StateError('AppConfig has already been initialized');
@@ -21,7 +21,7 @@ class AppConfig {
     AppConfig.apiBaseUrl = apiBaseUrl;
     AppConfig.userPoolId = userPoolId;
     AppConfig.region = region;
-    AppConfig.enableLogging = enableLogging;
+    AppConfig.logLevel = logLevel;
     _initialized = true;
   }
 
@@ -38,4 +38,55 @@ class AppConfig {
 
   // Helper method to get subscription by ID
   static String subscriptionByIdUrl(String id) => '$subscriptionsUrl/$id';
+}
+
+/// Logging levels following standard severity hierarchy
+enum LogLevel {
+  /// Detailed debug information
+  debug(0),
+  
+  /// Informational messages
+  info(1),
+  
+  /// Warning messages
+  warning(2),
+  
+  /// Error messages
+  error(3),
+  
+  /// Critical failures
+  critical(4),
+  
+  /// Disable all logging
+  none(99);
+
+  final int severity;
+  const LogLevel(this.severity);
+
+  /// Parse log level from string
+  static LogLevel fromString(String value) {
+    switch (value.toLowerCase()) {
+      case 'debug':
+        return LogLevel.debug;
+      case 'info':
+        return LogLevel.info;
+      case 'warning':
+      case 'warn':
+        return LogLevel.warning;
+      case 'error':
+        return LogLevel.error;
+      case 'critical':
+      case 'fatal':
+        return LogLevel.critical;
+      case 'none':
+      case 'off':
+        return LogLevel.none;
+      default:
+        return LogLevel.warning; // Safe default
+    }
+  }
+
+  bool shouldLog(LogLevel messageLevel) {
+    return messageLevel.severity >= severity;
+  }
 }
