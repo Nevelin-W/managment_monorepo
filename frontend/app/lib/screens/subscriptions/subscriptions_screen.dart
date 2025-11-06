@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/subscription_provider.dart';
+import 'package:go_router/go_router.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/add_subscription_dialog.dart';
 import '../../widgets/edit_subscription_dialog.dart';
@@ -143,6 +144,7 @@ class SubscriptionsScreen extends StatelessWidget {
                     return _EmptyState(
                       themeColors: themeColors,
                       onAddPressed: () => _showAddSubscriptionDialog(context),
+                      
                     );
                   }
 
@@ -156,9 +158,9 @@ class SubscriptionsScreen extends StatelessWidget {
                         backgroundColor: Colors.transparent,
                         elevation: 0,
                         leading: IconButton(
-                          icon: Icon(Icons.arrow_back, color: Colors.grey[400]),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
+  icon: Icon(Icons.arrow_back, color: Colors.grey[400]),
+  onPressed: () => context.go('/home'),
+),
                         flexibleSpace: FlexibleSpaceBar(
                           background: Padding(
                             padding: const EdgeInsets.fromLTRB(24, 70, 24, 24),

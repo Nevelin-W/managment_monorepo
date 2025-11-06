@@ -5,6 +5,7 @@ import '../screens/auth/signup_screen.dart';
 import '../screens/home/home_screen.dart';
 import '../screens/auth/email_verification_screen.dart';
 import '../screens/subscriptions/subscriptions_screen.dart';
+import '../screens/settings/settings_screen.dart';
 
 class AppRouter {
   static final GoRouter router = GoRouter(
@@ -33,12 +34,14 @@ class AppRouter {
       GoRoute(
         path: '/home',
         builder: (context, state) => const HomeScreen(),
-        routes: [
-          GoRoute(
-            path: 'subscriptions',
-            builder: (context, state) => const SubscriptionsScreen(),
-          ),
-        ],
+      ),
+      GoRoute(
+        path: '/home/subscriptions',
+        builder: (context, state) => const SubscriptionsScreen(),
+      ),
+      GoRoute(
+        path: '/home/settings',
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
   );

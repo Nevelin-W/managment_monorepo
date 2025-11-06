@@ -45,7 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: themeColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Subscription', style: TextStyle(color: Colors.white)),
+        title: const Text('Delete Subscription',
+            style: TextStyle(color: Colors.white)),
         content: Text(
           'Are you sure you want to delete "${subscription.name}"? This action cannot be undone.',
           style: TextStyle(color: Colors.grey[400]),
@@ -60,7 +61,8 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextButton.styleFrom(
               foregroundColor: Colors.red,
             ),
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Delete',
+                style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -68,15 +70,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await context.read<SubscriptionProvider>().deleteSubscription(subscription.id);
-        
+        await context
+            .read<SubscriptionProvider>()
+            .deleteSubscription(subscription.id);
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${subscription.name} deleted successfully'),
               backgroundColor: themeColors.primary,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
             ),
           );
         }
@@ -87,7 +92,8 @@ class _HomeScreenState extends State<HomeScreen> {
               content: Text('Failed to delete subscription: $e'),
               backgroundColor: Colors.red,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
               duration: const Duration(seconds: 5),
             ),
           );
@@ -99,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final themeColors = context.watch<ThemeProvider>().themeColors;
-    
+
     return Scaffold(
       backgroundColor: themeColors.background,
       body: Container(
@@ -120,7 +126,8 @@ class _HomeScreenState extends State<HomeScreen> {
             Positioned.fill(
               child: Opacity(
                 opacity: 0.03,
-                child: CustomPaint(painter: GridPainter(color: themeColors.primary)),
+                child: CustomPaint(
+                    painter: GridPainter(color: themeColors.primary)),
               ),
             ),
 
@@ -150,7 +157,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   if (subProvider.isLoading) {
                     return Center(
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(themeColors.primary),
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(themeColors.primary),
                       ),
                     );
                   }
@@ -194,13 +202,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         actions: [
                           IconButton(
-                            icon: Icon(Icons.settings_outlined, color: Colors.grey[400]),
+                            icon: Icon(Icons.settings_outlined,
+                                color: Colors.grey[400]),
                             onPressed: () {
-                              // TODO: Navigate to settings
+                              context.go('/home/settings');
                             },
                           ),
                           IconButton(
-                            icon: Icon(Icons.logout, color: themeColors.primary),
+                            icon:
+                                Icon(Icons.logout, color: themeColors.primary),
                             onPressed: () async {
                               await context.read<AuthProvider>().logout();
                               if (context.mounted) {
@@ -233,7 +243,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               Expanded(
                                 child: _StatCard(
                                   title: 'Monthly',
-                                  value: '\$${subProvider.totalMonthlySpend.toStringAsFixed(0)}',
+                                  value:
+                                      '\$${subProvider.totalMonthlySpend.toStringAsFixed(0)}',
                                   icon: Icons.payments_outlined,
                                   themeColors: themeColors,
                                   gradientColors: [
@@ -264,14 +275,19 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               if (subProvider.subscriptions.isNotEmpty)
                                 TextButton.icon(
-                                  onPressed: () => context.go('/home/subscriptions'),
-                                  icon: Icon(Icons.arrow_forward, size: 16, color: themeColors.primary),
+                                  onPressed: () =>
+                                      context.go('/home/subscriptions'),
+                                  icon: Icon(Icons.arrow_forward,
+                                      size: 16, color: themeColors.primary),
                                   label: Text(
                                     'View All',
-                                    style: TextStyle(color: themeColors.primary, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                        color: themeColors.primary,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                   style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 8),
                                   ),
                                 ),
                             ],
@@ -299,11 +315,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 return _SubscriptionCard(
                                   subscription: sub,
                                   themeColors: themeColors,
-                                  onEdit: () => _showEditSubscriptionDialog(sub),
+                                  onEdit: () =>
+                                      _showEditSubscriptionDialog(sub),
                                   onDelete: () => _confirmDelete(sub),
                                 );
                               },
-                              childCount: subProvider.subscriptions.take(3).length,
+                              childCount:
+                                  subProvider.subscriptions.take(3).length,
                             ),
                           ),
                         ),
@@ -320,7 +338,8 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: themeColors.primary,
         elevation: 8,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Subscription', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text('Add Subscription',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
@@ -505,13 +524,15 @@ class _SubscriptionCard extends StatelessWidget {
             PopupMenuButton<String>(
               icon: Icon(Icons.more_vert, color: Colors.grey[400], size: 20),
               color: themeColors.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               itemBuilder: (context) => [
                 PopupMenuItem(
                   value: 'edit',
                   child: Row(
                     children: [
-                      Icon(Icons.edit_outlined, size: 18, color: themeColors.primary),
+                      Icon(Icons.edit_outlined,
+                          size: 18, color: themeColors.primary),
                       const SizedBox(width: 12),
                       const Text('Edit', style: TextStyle(color: Colors.white)),
                     ],
