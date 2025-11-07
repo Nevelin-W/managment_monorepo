@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../models/subscription_model.dart';
-import '../../providers/subscription_provider.dart';
+import '../../../models/subscription_model.dart';
+import '../../../providers/subscription_provider.dart';
 
 class EditSubscriptionDialog extends StatefulWidget {
   final Subscription subscription;
@@ -80,16 +80,6 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
     });
 
     try {
-      print('=== UPDATE SUBSCRIPTION DEBUG ===');
-      print('Subscription ID: ${widget.subscription.id}');
-      print('Name: ${_nameController.text.trim()}');
-      print('Amount: ${_amountController.text.trim()}');
-      print('Billing Cycle: $_selectedBillingCycle');
-      print('Next Billing Date: $_nextBillingDate');
-      print('Category: ${_categoryController.text.trim()}');
-      print('Description: ${_descriptionController.text.trim()}');
-      print('Is Active: $_isActive');
-
       final updatedSubscription = Subscription(
         id: widget.subscription.id,
         name: _nameController.text.trim(),
@@ -104,14 +94,7 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
             : _descriptionController.text.trim(),
         isActive: _isActive,
       );
-
-      print('Updated subscription object: ${updatedSubscription.toJson()}');
-      print('Calling provider.updateSubscription()...');
-
       await context.read<SubscriptionProvider>().updateSubscription(updatedSubscription);
-
-      print('Provider.updateSubscription() completed');
-      
       // Check if there was an error in the provider
       final provider = context.read<SubscriptionProvider>();
       if (provider.error != null) {
@@ -126,12 +109,8 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
             backgroundColor: Colors.green,
           ),
         );
-        print('=== UPDATE SUBSCRIPTION SUCCESS ===');
       }
     } catch (e) {
-      print('=== UPDATE SUBSCRIPTION ERROR ===');
-      print('Error: $e');
-      print('Error type: ${e.runtimeType}');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -173,7 +152,7 @@ class _EditSubscriptionDialogState extends State<EditSubscriptionDialog> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(

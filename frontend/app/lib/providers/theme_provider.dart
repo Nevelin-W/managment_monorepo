@@ -11,7 +11,7 @@ enum AppThemeType {
 }
 
 class ThemeProvider extends ChangeNotifier {
-  AppThemeType _currentTheme = AppThemeType.mint;
+  AppThemeType _currentTheme = AppThemeType.sunset;
   
   AppThemeType get currentTheme => _currentTheme;
   

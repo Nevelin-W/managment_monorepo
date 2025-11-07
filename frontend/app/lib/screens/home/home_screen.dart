@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import '../../config/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/subscription_provider.dart';
 import '../../providers/theme_provider.dart';
-import '../../widgets/add_subscription_dialog.dart';
-import '../../widgets/edit_subscription_dialog.dart';
+import '../../widgets/subscriptions/add_subscription_dialog.dart';
+import '../../widgets/subscriptions/edit_subscription_dialog.dart';
+import '../../widgets/common/subscription_card.dart';
+import '../../widgets/common/stat_card.dart';
+import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/screen_background.dart';
 import '../../models/subscription_model.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -19,8 +24,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Fetch subscriptions after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SubscriptionProvider>().fetchSubscriptions();
+      if (mounted) {
+        context.read<SubscriptionProvider>().fetchSubscriptions();
+      }
     });
   }
 
@@ -39,6 +47,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _confirmDelete(Subscription subscription) async {
+    if (!mounted) return;
+    
     final themeColors = context.read<ThemeProvider>().themeColors;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -58,9 +68,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete',
                 style: TextStyle(fontWeight: FontWeight.bold)),
           ),
@@ -104,233 +112,60 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeColors = context.watch<ThemeProvider>().themeColors;
+    // Use select to only rebuild when themeColors change
+    final themeColors = context.select<ThemeProvider, ThemeColors>(
+      (provider) => provider.themeColors,
+    );
 
     return Scaffold(
       backgroundColor: themeColors.background,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              themeColors.background,
-              themeColors.surface,
-              themeColors.background,
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Subtle grid background
-            Positioned.fill(
-              child: Opacity(
-                opacity: 0.03,
-                child: CustomPaint(
-                    painter: GridPainter(color: themeColors.primary)),
-              ),
-            ),
-
-            // Glow effects
-            Positioned(
-              top: -100,
-              right: -100,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      themeColors.primary.withValues(alpha: 0.1),
-                      Colors.transparent,
-                    ],
+      body: ScreenBackground(
+        themeColors: themeColors,
+        child: SafeArea(
+          child: Consumer2<AuthProvider, SubscriptionProvider>(
+            builder: (context, authProvider, subProvider, _) {
+              if (subProvider.isLoading) {
+                return Center(
+                  child: CircularProgressIndicator(
+                    valueColor:
+                        AlwaysStoppedAnimation<Color>(themeColors.primary),
                   ),
-                ),
-              ),
-            ),
+                );
+              }
 
-            // Main content
-            SafeArea(
-              child: Consumer2<AuthProvider, SubscriptionProvider>(
-                builder: (context, authProvider, subProvider, _) {
-                  if (subProvider.isLoading) {
-                    return Center(
-                      child: CircularProgressIndicator(
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(themeColors.primary),
+              return CustomScrollView(
+                slivers: [
+                  _HomeAppBar(
+                    userName: authProvider.user?.name ?? "User",
+                    themeColors: themeColors,
+                  ),
+                  _StatsSection(
+                    themeColors: themeColors,
+                    activeCount: subProvider.subscriptions.length,
+                    monthlySpend: subProvider.totalMonthlySpend,
+                  ),
+                  _SubscriptionsHeader(
+                    themeColors: themeColors,
+                    hasSubscriptions: subProvider.subscriptions.isNotEmpty,
+                  ),
+                  if (subProvider.subscriptions.isEmpty)
+                    SliverFillRemaining(
+                      child: EmptyStateWidget(
+                        themeColors: themeColors,
+                        onAddPressed: _showAddSubscriptionDialog,
                       ),
-                    );
-                  }
-
-                  return CustomScrollView(
-                    slivers: [
-                      // App Bar
-                      SliverAppBar(
-                        expandedHeight: 180,
-                        floating: false,
-                        pinned: true,
-                        backgroundColor: Colors.transparent,
-                        elevation: 0,
-                        flexibleSpace: FlexibleSpaceBar(
-                          background: Padding(
-                            padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Welcome back,',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[400],
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  authProvider.user?.name ?? "User",
-                                  style: TextStyle(
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        actions: [
-                          IconButton(
-                            icon: Icon(Icons.settings_outlined,
-                                color: Colors.grey[400]),
-                            onPressed: () {
-                              context.go('/home/settings');
-                            },
-                          ),
-                          IconButton(
-                            icon:
-                                Icon(Icons.logout, color: themeColors.primary),
-                            onPressed: () async {
-                              await context.read<AuthProvider>().logout();
-                              if (context.mounted) {
-                                context.go('/login');
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-
-                      // Stats Cards
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: _StatCard(
-                                  title: 'Active',
-                                  value: '${subProvider.subscriptions.length}',
-                                  icon: Icons.subscriptions_outlined,
-                                  themeColors: themeColors,
-                                  gradientColors: [
-                                    themeColors.primary,
-                                    themeColors.secondary,
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: _StatCard(
-                                  title: 'Monthly',
-                                  value:
-                                      '\$${subProvider.totalMonthlySpend.toStringAsFixed(0)}',
-                                  icon: Icons.payments_outlined,
-                                  themeColors: themeColors,
-                                  gradientColors: [
-                                    themeColors.secondary,
-                                    themeColors.tertiary,
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Subscriptions Header
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text(
-                                'Your Subscriptions',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              if (subProvider.subscriptions.isNotEmpty)
-                                TextButton.icon(
-                                  onPressed: () =>
-                                      context.go('/home/subscriptions'),
-                                  icon: Icon(Icons.arrow_forward,
-                                      size: 16, color: themeColors.primary),
-                                  label: Text(
-                                    'View All',
-                                    style: TextStyle(
-                                        color: themeColors.primary,
-                                        fontWeight: FontWeight.w600),
-                                  ),
-                                  style: TextButton.styleFrom(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      // Subscription List or Empty State
-                      if (subProvider.subscriptions.isEmpty)
-                        SliverFillRemaining(
-                          child: Center(
-                            child: _EmptyState(
-                              themeColors: themeColors,
-                              onAddPressed: _showAddSubscriptionDialog,
-                            ),
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
-                          sliver: SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final sub = subProvider.subscriptions[index];
-                                return _SubscriptionCard(
-                                  subscription: sub,
-                                  themeColors: themeColors,
-                                  onEdit: () =>
-                                      _showEditSubscriptionDialog(sub),
-                                  onDelete: () => _confirmDelete(sub),
-                                );
-                              },
-                              childCount:
-                                  subProvider.subscriptions.take(3).length,
-                            ),
-                          ),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ),
-          ],
+                    )
+                  else
+                    _SubscriptionsList(
+                      subscriptions: subProvider.subscriptions.take(3).toList(),
+                      themeColors: themeColors,
+                      onEdit: _showEditSubscriptionDialog,
+                      onDelete: _confirmDelete,
+                    ),
+                ],
+              );
+            },
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -345,83 +180,107 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String title;
-  final String value;
-  final IconData icon;
-  final themeColors;
-  final List<Color> gradientColors;
+/// Extracted App Bar widget for better performance
+class _HomeAppBar extends StatelessWidget {
+  final String userName;
+  final ThemeColors themeColors;
 
-  const _StatCard({
-    required this.title,
-    required this.value,
-    required this.icon,
+  const _HomeAppBar({
+    required this.userName,
     required this.themeColors,
-    required this.gradientColors,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeColors.surface.withValues(alpha: 0.6),
-            themeColors.surface.withValues(alpha: 0.3),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return SliverAppBar(
+      expandedHeight: 180,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome back,',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[400],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                userName,
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  letterSpacing: -0.5,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.settings_outlined, color: Colors.grey[400]),
+          onPressed: () => context.go('/home/settings'),
+        ),
+        IconButton(
+          icon: Icon(Icons.logout, color: themeColors.primary),
+          onPressed: () async {
+            await context.read<AuthProvider>().logout();
+            if (context.mounted) {
+              context.go('/login');
+            }
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Extracted stats section for better performance
+class _StatsSection extends StatelessWidget {
+  final ThemeColors themeColors;
+  final int activeCount;
+  final double monthlySpend;
+
+  const _StatsSection({
+    required this.themeColors,
+    required this.activeCount,
+    required this.monthlySpend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
       child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: gradientColors),
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: gradientColors[0].withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Icon(icon, color: Colors.white, size: 24),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-                letterSpacing: -0.5,
+            Expanded(
+              child: StatCard(
+                title: 'Active',
+                value: activeCount.toString(),
+                icon: Icons.subscriptions_outlined,
+                themeColors: themeColors,
+                gradientColors: [themeColors.primary, themeColors.secondary],
               ),
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey[400],
-                fontWeight: FontWeight.w500,
+            const SizedBox(width: 16),
+            Expanded(
+              child: StatCard(
+                title: 'Monthly',
+                value: '\$${monthlySpend.toStringAsFixed(0)}',
+                icon: Icons.payments_outlined,
+                themeColors: themeColors,
+                gradientColors: [themeColors.secondary, themeColors.tertiary],
               ),
             ),
           ],
@@ -431,14 +290,63 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _SubscriptionCard extends StatelessWidget {
-  final Subscription subscription;
-  final themeColors;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+/// Extracted header section
+class _SubscriptionsHeader extends StatelessWidget {
+  final ThemeColors themeColors;
+  final bool hasSubscriptions;
 
-  const _SubscriptionCard({
-    required this.subscription,
+  const _SubscriptionsHeader({
+    required this.themeColors,
+    required this.hasSubscriptions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Your Subscriptions',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            if (hasSubscriptions)
+              TextButton.icon(
+                onPressed: () => context.go('/home/subscriptions'),
+                icon: Icon(Icons.arrow_forward,
+                    size: 16, color: themeColors.primary),
+                label: Text(
+                  'View All',
+                  style: TextStyle(
+                      color: themeColors.primary, fontWeight: FontWeight.w600),
+                ),
+                style: TextButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Extracted subscriptions list with keys for efficient updates
+class _SubscriptionsList extends StatelessWidget {
+  final List<Subscription> subscriptions;
+  final ThemeColors themeColors;
+  final void Function(Subscription) onEdit;
+  final void Function(Subscription) onDelete;
+
+  const _SubscriptionsList({
+    required this.subscriptions,
     required this.themeColors,
     required this.onEdit,
     required this.onDelete,
@@ -446,228 +354,24 @@ class _SubscriptionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeColors.surface.withValues(alpha: 0.5),
-            themeColors.surface.withValues(alpha: 0.3),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    themeColors.primary.withValues(alpha: 0.3),
-                    themeColors.secondary.withValues(alpha: 0.2),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: themeColors.primary.withValues(alpha: 0.3),
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                Icons.subscriptions_outlined,
-                color: themeColors.primary,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    subscription.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Next: ${subscription.nextBillingDate.day}/${subscription.nextBillingDate.month}/${subscription.nextBillingDate.year}',
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              '\$${subscription.amount.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: themeColors.primary,
-              ),
-            ),
-            PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, color: Colors.grey[400], size: 20),
-              color: themeColors.surface,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit_outlined,
-                          size: 18, color: themeColors.primary),
-                      const SizedBox(width: 12),
-                      const Text('Edit', style: TextStyle(color: Colors.white)),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                      SizedBox(width: 12),
-                      Text('Delete', style: TextStyle(color: Colors.red)),
-                    ],
-                  ),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'edit') {
-                  onEdit();
-                } else if (value == 'delete') {
-                  onDelete();
-                }
-              },
-            ),
-          ],
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final sub = subscriptions[index];
+            return SubscriptionCard(
+              key: ValueKey(sub.id), // Key for efficient updates
+              subscription: sub,
+              themeColors: themeColors,
+              isCompact: true,
+              onEdit: () => onEdit(sub),
+              onDelete: () => onDelete(sub),
+            );
+          },
+          childCount: subscriptions.length,
         ),
       ),
     );
   }
-}
-
-class _EmptyState extends StatelessWidget {
-  final themeColors;
-  final VoidCallback onAddPressed;
-
-  const _EmptyState({
-    required this.themeColors,
-    required this.onAddPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(48),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  themeColors.primary.withValues(alpha: 0.2),
-                  themeColors.secondary.withValues(alpha: 0.1),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(30),
-              border: Border.all(
-                color: themeColors.primary.withValues(alpha: 0.3),
-                width: 2,
-              ),
-            ),
-            child: Icon(
-              Icons.inbox_outlined,
-              size: 48,
-              color: themeColors.primary.withValues(alpha: 0.6),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'No subscriptions yet',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add your first subscription to get started',
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: onAddPressed,
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              'Add Subscription',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: themeColors.primary,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 8,
-              shadowColor: themeColors.primary.withValues(alpha: 0.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class GridPainter extends CustomPainter {
-  final Color color;
-
-  GridPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color.withValues(alpha: 0.05)
-      ..strokeWidth = 1
-      ..isAntiAlias = false;
-
-    const step = 50.0;
-    for (double i = 0; i < size.width; i += step) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += step) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

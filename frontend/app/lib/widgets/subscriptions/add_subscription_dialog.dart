@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../models/subscription_model.dart';
-import '../../providers/subscription_provider.dart';
+import '../../../models/subscription_model.dart';
+import '../../../providers/subscription_provider.dart';
 
 class AddSubscriptionDialog extends StatefulWidget {
   const AddSubscriptionDialog({super.key});
