@@ -8,9 +8,9 @@ import '../../widgets/subscriptions/add_subscription_dialog.dart';
 import '../../widgets/subscriptions/edit_subscription_dialog.dart';
 import '../../widgets/common/subscription_card.dart';
 import '../../widgets/common/empty_state.dart';
-import '../../widgets/common/app_filter_chip.dart';
 import '../../widgets/common/screen_background.dart';
 import '../../models/subscription_model.dart';
+import '../../widgets/subscriptions/subscription_filter_bar.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -38,7 +38,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
 
   Future<void> _confirmDelete(Subscription subscription) async {
     if (!mounted) return;
-    
+
     final themeColors = context.read<ThemeProvider>().themeColors;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -100,7 +100,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     }
   }
 
-  List<Subscription> _getFilteredSubscriptions(List<Subscription> subscriptions) {
+  List<Subscription> _getFilteredSubscriptions(
+      List<Subscription> subscriptions) {
     switch (_selectedFilter) {
       case 'Monthly':
         return subscriptions
@@ -110,7 +111,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         return subscriptions
             .where((s) => s.billingCycle == BillingCycle.yearly)
             .toList();
-      case 'Weekly':  
+      case 'Weekly':
         return subscriptions
             .where((s) => s.billingCycle == BillingCycle.weekly)
             .toList();
@@ -152,7 +153,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         themeColors: themeColors,
                         onAddPressed: _showAddSubscriptionDialog,
                         isFullPage: true,
-                        subtitle: 'Start tracking your subscriptions\nby adding one',
+                        subtitle:
+                            'Start tracking your subscriptions\nby adding one',
                       ),
                     ),
                   ],
@@ -169,14 +171,19 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     themeColors: themeColors,
                     totalCount: provider.subscriptions.length,
                   ),
-                  _FilterSection(
-                    themeColors: themeColors,
-                    selectedFilter: _selectedFilter,
-                    onFilterChanged: (filter) {
-                      setState(() {
-                        _selectedFilter = filter;
-                      });
-                    },
+                  SliverToBoxAdapter(
+                    child: SubscriptionFilterBar(
+                      themeColors: themeColors,
+                      selectedFilter: _selectedFilter,
+                      onFilterChanged: (filter) {
+                        setState(() {
+                          _selectedFilter = filter;
+                        });
+                      },
+                      onSortPressed: () {
+                        // TODO: Implement sort functionality
+                      },
+                    ),
                   ),
                   _OptimizedSubscriptionsList(
                     subscriptions: filteredSubscriptions,
@@ -199,7 +206,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context, ThemeColors themeColors, int count) {
+  Widget _buildAppBar(
+      BuildContext context, ThemeColors themeColors, int count) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 8, 24, 16),
       child: Row(
@@ -285,69 +293,6 @@ class _SubscriptionsAppBar extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Extracted filter section
-class _FilterSection extends StatelessWidget {
-  final ThemeColors themeColors;
-  final String selectedFilter;
-  final ValueChanged<String> onFilterChanged;
-
-  const _FilterSection({
-    required this.themeColors,
-    required this.selectedFilter,
-    required this.onFilterChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-        child: Row(
-          children: [
-            AppFilterChip(
-              label: 'All',
-              isSelected: selectedFilter == 'All',
-              themeColors: themeColors,
-              onTap: () => onFilterChanged('All'),
-            ),
-            const SizedBox(width: 8),
-            AppFilterChip(
-              label: 'Monthly',
-              isSelected: selectedFilter == 'Monthly',
-              themeColors: themeColors,
-              onTap: () => onFilterChanged('Monthly'),
-            ),
-            const SizedBox(width: 8),
-            AppFilterChip(
-              label: 'Yearly',
-              isSelected: selectedFilter == 'Yearly',
-              themeColors: themeColors,
-              onTap: () => onFilterChanged('Yearly'),
-            ),
-            AppFilterChip(
-              label: 'Weekly',
-              isSelected: selectedFilter == 'Weekly',
-              themeColors: themeColors,
-              onTap: () => onFilterChanged('Weekly'),
-            ),
-            const Spacer(),
-            IconButton(
-              icon: Icon(
-                Icons.sort,
-                color: themeColors.primary,
-                size: 24,
-              ),
-              onPressed: () {
-                // TODO: Implement sort functionality
-              },
-            ),
-          ],
         ),
       ),
     );

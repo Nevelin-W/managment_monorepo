@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../config/theme.dart';
+import '../utils/app_constants.dart'; // Import your constants
 import '../widgets/common/bear_logo.dart';
 import '../widgets/common/grid_painter.dart';
 import '../widgets/common/orbital_loading_indicator.dart';
@@ -134,11 +135,11 @@ class _SplashBody extends StatelessWidget {
   Widget _buildGridBackground() {
     return Positioned.fill(
       child: Opacity(
-        opacity: 0.1,
+        opacity: AppOpacity.subtle, // Using constant
         child: CustomPaint(
           painter: GridPainter(
             color: themeColors.primary,
-            step: 50.0,
+            step: AppGridConstants.gridSpacing, // Using constant
           ),
         ),
       ),
@@ -152,7 +153,7 @@ class _SplashBody extends StatelessWidget {
       animation: pulseAnimation,
       builder: (context, _) {
         final scale = pulseAnimation.value;
-        final baseSize = 250.0;
+        final baseSize = AppGridConstants.glowSize; // Using constant
         
         return Stack(
           children: [
@@ -161,7 +162,7 @@ class _SplashBody extends StatelessWidget {
               left: size.width * 0.15,
               size: baseSize * scale,
               color: themeColors.primary,
-              opacity: 0.2 * scale,
+              opacity: AppOpacity.light * scale, // Using constant
             ),
             _buildGlow(
               bottom: size.height * 0.2,
@@ -214,11 +215,11 @@ class _SplashBody extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildBearLogo(),
-            const SizedBox(height: 48),
+            SizedBox(height: AppSpacing.xxxl + AppSpacing.lg), // Using constants (48)
             _buildBrandName(),
-            const SizedBox(height: 16),
+            SizedBox(height: AppSpacing.lg), // Using constant
             _buildTagline(),
-            const SizedBox(height: 64),
+            SizedBox(height: AppSpacing.xxxl * 2), // Using constant (64)
             OrbitalLoadingIndicator(colors: themeColors),
           ],
         ),
@@ -240,18 +241,18 @@ class _SplashBody extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  themeColors.primary.withValues(alpha: 0.2),
+                  themeColors.primary.withValues(alpha: AppOpacity.light), // Using constant
                   themeColors.tertiary.withValues(alpha: 0.15),
                 ],
               ),
-              borderRadius: BorderRadius.circular(40),
+              borderRadius: BorderRadius.circular(AppBorderRadius.cardLarge * 2), // Using constant (40)
               border: Border.all(
-                color: themeColors.primary.withValues(alpha: 0.4),
+                color: themeColors.primary.withValues(alpha: AppOpacity.medium + AppOpacity.subtle), // Using constants (0.4)
                 width: 2,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: themeColors.primary.withValues(alpha: 0.4),
+                  color: themeColors.primary.withValues(alpha: AppOpacity.medium + AppOpacity.subtle), // Using constants
                   blurRadius: 40,
                   spreadRadius: 0,
                 ),
@@ -279,16 +280,16 @@ class _SplashBody extends StatelessWidget {
         ],
         stops: const [0.0, 0.5, 1.0],
       ).createShader(bounds),
-      child: const Text.rich(
+      child: Text.rich(
         TextSpan(
           style: TextStyle(
-            fontSize: 48,
+            fontSize: AppFontSize.xxxl + AppBorderRadius.xl, // Using constants (48)
             fontFamily: 'monospace',
             fontWeight: FontWeight.bold,
             color: Colors.white,
             letterSpacing: -1,
           ),
-          children: [
+          children: const [
             TextSpan(text: 'Bear'),
             TextSpan(
               text: 'Minimum',
@@ -306,7 +307,7 @@ class _SplashBody extends StatelessWidget {
       '> Just the essentials_',
       style: TextStyle(
         color: themeColors.primary,
-        fontSize: 13,
+        fontSize: AppFontSize.caption, // Using constant
         fontFamily: 'monospace',
         letterSpacing: 2,
         fontWeight: FontWeight.w500,
@@ -324,7 +325,7 @@ class _SplashBody extends StatelessWidget {
               radius: 1.0,
               colors: [
                 Colors.transparent,
-                Colors.black.withValues(alpha: 0.3),
+                Colors.black.withValues(alpha: AppOpacity.medium), // Using constant
               ],
             ),
           ),
