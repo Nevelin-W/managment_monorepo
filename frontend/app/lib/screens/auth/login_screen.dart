@@ -6,6 +6,7 @@ import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import '../../widgets/auth/login_form.dart';
 import '../../widgets/auth/auth_screen_layout.dart';
+import '../../widgets/common/brand_header.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,9 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
     // Use addPostFrameCallback to ensure the build is complete
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       final authProvider = context.read<AuthProvider>();
-      
+
       // If user is already authenticated, redirect to home
       if (authProvider.isAuthenticated) {
         context.go('/home');
@@ -65,78 +66,13 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       body: AuthScreenLayout(
         themeColors: themeColors,
-        header: _LoginHeader(themeColors: themeColors),
+        header: BrandHeader(
+          themeColors: themeColors,
+          icon: Icons.lock_outline,
+        ),
         footer: _SignUpFooter(themeColors: themeColors),
         child: LoginForm(themeColors: themeColors),
       ),
-    );
-  }
-}
-
-class _LoginHeader extends StatelessWidget {
-  final ThemeColors themeColors;
-
-  const _LoginHeader({required this.themeColors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Container(
-          width: 56,
-          height: 56,
-          decoration: BoxDecoration(
-            color: themeColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: themeColors.primary.withValues(alpha: 0.3),
-              width: 2,
-            ),
-          ),
-          child: Center(
-            child: Icon(
-              Icons.lock_outline,
-              color: themeColors.primary,
-              size: 28,
-            ),
-          ),
-        ),
-        const SizedBox(height: 20),
-        Text.rich(
-          TextSpan(
-            style: const TextStyle(
-              fontSize: 32,
-              fontFamily: 'monospace',
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              letterSpacing: -0.5,
-            ),
-            children: [
-              const TextSpan(text: 'Bear'),
-              TextSpan(
-                text: 'Minimum',
-                style: TextStyle(
-                  fontWeight: FontWeight.w300,
-                  color: themeColors.primary,
-                ),
-              ),
-            ],
-          ),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          '> Just the essentials_',
-          style: TextStyle(
-            color: Color(0xFF6B7280),
-            fontSize: 11,
-            fontFamily: 'monospace',
-            letterSpacing: 1.5,
-            fontWeight: FontWeight.w500,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
     );
   }
 }
