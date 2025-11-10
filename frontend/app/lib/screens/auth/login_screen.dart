@@ -2,18 +2,65 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../config/theme.dart';
 import '../../widgets/auth/login_form.dart';
 import '../../widgets/auth/auth_screen_layout.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  @override
+  void initState() {
+    super.initState();
+    _checkAndRedirect();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Check again when dependencies change (e.g., when navigating back)
+    _checkAndRedirect();
+  }
+
+  void _checkAndRedirect() {
+    // Use addPostFrameCallback to ensure the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      final authProvider = context.read<AuthProvider>();
+      
+      // If user is already authenticated, redirect to home
+      if (authProvider.isAuthenticated) {
+        context.go('/home');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final themeColors = context.select<ThemeProvider, ThemeColors>(
       (provider) => provider.themeColors,
     );
+
+    // Listen to auth changes and redirect if authenticated
+    final isAuthenticated = context.select<AuthProvider, bool>(
+      (provider) => provider.isAuthenticated,
+    );
+
+    // If authenticated during build, schedule redirect
+    if (isAuthenticated) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.go('/home');
+        }
+      });
+    }
 
     return Scaffold(
       body: AuthScreenLayout(

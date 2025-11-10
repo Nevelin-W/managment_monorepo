@@ -170,5 +170,6 @@ void main() {
   final pngBytes = img.encodePng(image, level: 6);
   File('assets/images/pixel_bear.png').writeAsBytesSync(pngBytes);
   
+  // ignore: avoid_print
   print('✓ Bear exported to assets/images/pixel_bear.png with transparency');
 }
