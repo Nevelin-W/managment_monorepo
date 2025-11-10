@@ -22,7 +22,14 @@ class EmailVerificationForm extends StatefulWidget {
 
 class _EmailVerificationFormState extends State<EmailVerificationForm> {
   final _authService = AuthService();
-  final _codeController = TextEditingController();
+  final List<TextEditingController> _controllers = List.generate(
+    6,
+    (index) => TextEditingController(),
+  );
+  final List<FocusNode> _focusNodes = List.generate(
+    6,
+    (index) => FocusNode(),
+  );
   
   bool _isLoading = false;
   bool _isResending = false;
@@ -30,14 +37,41 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
   String? _successMessage;
 
   @override
+  void initState() {
+    super.initState();
+    // Auto-focus first box when widget loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _focusNodes[0].requestFocus();
+    });
+  }
+
+  @override
   void dispose() {
-    _codeController.dispose();
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
     super.dispose();
   }
 
+  String _getCode() {
+    return _controllers.map((c) => c.text).join();
+  }
+
+  void _clearCode() {
+    for (var controller in _controllers) {
+      controller.clear();
+    }
+    _focusNodes[0].requestFocus();
+  }
+
   Future<void> _verifyCode() async {
-    if (_codeController.text.trim().isEmpty) {
-      setState(() => _errorMessage = 'Please enter the verification code');
+    final code = _getCode();
+    
+    if (code.length != 6) {
+      setState(() => _errorMessage = 'Please enter all 6 digits');
       return;
     }
 
@@ -48,10 +82,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
     });
 
     try {
-      await _authService.confirmEmail(
-        widget.email,
-        _codeController.text.trim(),
-      );
+      await _authService.confirmEmail(widget.email, code);
 
       if (!mounted) return;
 
@@ -72,6 +103,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
         _errorMessage = 'Verification failed. Please check the code and try again.';
         _isLoading = false;
       });
+      _clearCode();
     }
   }
 
@@ -91,6 +123,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
         _successMessage = 'Verification code resent! Check your email.';
         _isResending = false;
       });
+      _clearCode();
     } catch (e) {
       if (!mounted) return;
 
@@ -216,51 +249,111 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
   }
 
   Widget _buildCodeInput() {
-    return TextField(
-      controller: _codeController,
-      keyboardType: TextInputType.number,
-      inputFormatters: [
-        FilteringTextInputFormatter.digitsOnly,
-        LengthLimitingTextInputFormatter(6),
-      ],
-      enabled: !_isLoading,
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-        fontSize: 32,
-        letterSpacing: 12,
-        fontWeight: FontWeight.bold,
-        color: Colors.white,
-        fontFamily: 'monospace',
-      ),
-      decoration: InputDecoration(
-        hintText: '000000',
-        hintStyle: TextStyle(
-          color: Colors.grey[700],
-          letterSpacing: 12,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(6, (index) {
+        return Padding(
+          padding: EdgeInsets.symmetric(horizontal: 4),
+          child: _buildDigitBox(index),
+        );
+      }),
+    );
+  }
+
+  Widget _buildDigitBox(int index) {
+    return SizedBox(
+      width: 50,
+      height: 60,
+      child: TextField(
+        controller: _controllers[index],
+        focusNode: _focusNodes[index],
+        enabled: !_isLoading,
+        textAlign: TextAlign.center,
+        keyboardType: TextInputType.number,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
         ),
-        filled: true,
-        fillColor: widget.themeColors.background.withValues(alpha: 0.5),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(6), // Allow paste of full code
+        ],
+        decoration: InputDecoration(
+          counterText: '',
+          filled: true,
+          fillColor: widget.themeColors.background.withValues(alpha: 0.5),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
           ),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
           ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: widget.themeColors.primary,
-            width: 2,
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(
+              color: widget.themeColors.primary,
+              width: 2,
+            ),
           ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
+        onChanged: (value) {
+          if (value.length > 1) {
+            // Handle paste - distribute digits across all boxes
+            final pastedText = value;
+            _handlePaste(pastedText, index);
+            return;
+          }
+          
+          if (value.isNotEmpty) {
+            // Move to next field
+            if (index < 5) {
+              _focusNodes[index + 1].requestFocus();
+            } else {
+              // Last field filled, unfocus and auto-verify
+              _focusNodes[index].unfocus();
+              _verifyCode();
+            }
+          }
+        },
+        onTap: () {
+          // Only allow tapping if previous fields are filled
+          for (int i = 0; i < index; i++) {
+            if (_controllers[i].text.isEmpty) {
+              _focusNodes[i].requestFocus();
+              return;
+            }
+          }
+        },
       ),
     );
+  }
+
+  void _handlePaste(String pastedText, int startIndex) {
+    // Extract only digits from pasted text
+    final digits = pastedText.replaceAll(RegExp(r'\D'), '');
+    
+    // Fill boxes starting from the current index
+    for (int i = 0; i < digits.length && (startIndex + i) < 6; i++) {
+      _controllers[startIndex + i].text = digits[i];
+    }
+    
+    // Focus the next empty box or the last box if all filled
+    final nextEmptyIndex = _controllers.indexWhere((c) => c.text.isEmpty);
+    if (nextEmptyIndex != -1) {
+      _focusNodes[nextEmptyIndex].requestFocus();
+    } else {
+      // All boxes filled
+      _focusNodes[5].unfocus();
+      _verifyCode();
+    }
   }
 
   Widget _buildVerifyButton() {

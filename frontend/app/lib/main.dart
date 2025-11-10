@@ -14,7 +14,7 @@ void main() async {
   // Load configuration from build-time arguments
   loadConfig();
   
-  // Initialize Logger (replaces AppTalker.initialize())
+  // Initialize Logger
   AppLogger.initialize();
   
   runApp(const MyApp());
@@ -68,14 +68,20 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
+      child: Consumer2<ThemeProvider, AuthProvider>(
+        builder: (context, themeProvider, authProvider, _) {
+          // Initialize router with auth state
+          AppRouter().initialize(
+            isAuthenticated: () => authProvider.isAuthenticated,
+            enableLogging: AppConfig.logLevel == LogLevel.debug,
+          );
+          
           return MaterialApp.router(
             title: 'Subscription Tracker',
             theme: AppTheme.lightTheme,
             darkTheme: themeProvider.themeData,
             themeMode: ThemeMode.dark,
-            routerConfig: AppRouter.router,
+            routerConfig: AppRouter().router,
             debugShowCheckedModeBanner: false,
           );
         },
