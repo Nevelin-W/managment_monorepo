@@ -237,27 +237,29 @@ class _SignupFormState extends State<SignupForm> {
   }
 
   Widget _buildConfirmPasswordField() {
-    return ThemedTextField(
-      controller: _confirmPasswordController,
-      themeColors: widget.themeColors,
-      labelText: 'Confirm Password',
-      prefixIcon: Icons.lock_outlined,
-      obscureText: _obscureConfirmPassword,
-      enabled: !_isLoading,
-      validator: _validateConfirmPassword,
-      suffixIcon: IconButton(
-        icon: Icon(
-          _obscureConfirmPassword
-              ? Icons.visibility_outlined
-              : Icons.visibility_off_outlined,
-          color: Colors.grey[400],
-        ),
-        onPressed: () {
-          setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-        },
+  return ThemedTextField(
+    controller: _confirmPasswordController,
+    themeColors: widget.themeColors,
+    labelText: 'Confirm Password',
+    prefixIcon: Icons.lock_outlined,
+    obscureText: _obscureConfirmPassword,
+    enabled: !_isLoading,
+    validator: _validateConfirmPassword,
+    textInputAction: TextInputAction.done, 
+    onFieldSubmitted: (_) => _handleSignup(), 
+    suffixIcon: IconButton(
+      icon: Icon(
+        _obscureConfirmPassword
+            ? Icons.visibility_outlined
+            : Icons.visibility_off_outlined,
+        color: Colors.grey[400],
       ),
-    );
-  }
+      onPressed: () {
+        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+      },
+    ),
+  );
+}
 
   Widget _buildSignUpButton() {
     return GradientButton(
