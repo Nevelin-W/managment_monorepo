@@ -12,15 +12,6 @@ import '../../widgets/common/screen_background.dart';
 import '../../models/subscription_model.dart';
 import '../../widgets/subscriptions/subscription_filter_bar.dart';
 
-enum SortOption {
-  nameAsc,
-  nameDesc,
-  priceAsc,
-  priceDesc,
-  dateAsc,
-  dateDesc,
-}
-
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
 
@@ -164,136 +155,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     return sorted;
   }
 
-  void _showSortMenu(BuildContext context, ThemeColors themeColors) {
-    final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
-    
-    final Offset buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
-    final Size buttonSize = button.size;
-    final Size overlaySize = overlay.size;
-    
-    // Menu dimensions
-    const double menuWidth = 240.0;
-    
-    // Position menu below button, aligned to right edge of button
-    final double top = buttonPosition.dy + buttonSize.height + 8;
-    final double right = overlaySize.width - (buttonPosition.dx + buttonSize.width);
-    
-    // Ensure menu doesn't go off left edge
-    final double left = buttonPosition.dx + buttonSize.width - menuWidth;
-    final double adjustedLeft = left < 16 ? 16 : left;
-    final double adjustedRight = overlaySize.width - adjustedLeft - menuWidth;
-
-    showMenu<SortOption>(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        adjustedLeft,
-        top,
-        adjustedRight,
-        overlaySize.height - top,
-      ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: themeColors.surface,
-      elevation: 8,
-      constraints: const BoxConstraints(minWidth: 240, maxWidth: 240),
-      items: [
-        _buildSortMenuItem(
-          SortOption.nameAsc,
-          'Name (A-Z)',
-          Icons.sort_by_alpha,
-          themeColors,
-        ),
-        _buildSortMenuItem(
-          SortOption.nameDesc,
-          'Name (Z-A)',
-          Icons.sort_by_alpha,
-          themeColors,
-        ),
-        _buildSortMenuItem(
-          SortOption.priceAsc,
-          'Price (Low to High)',
-          Icons.arrow_upward,
-          themeColors,
-        ),
-        _buildSortMenuItem(
-          SortOption.priceDesc,
-          'Price (High to Low)',
-          Icons.arrow_downward,
-          themeColors,
-        ),
-        _buildSortMenuItem(
-          SortOption.dateAsc,
-          'Next Bill Date (Nearest)',
-          Icons.calendar_today,
-          themeColors,
-        ),
-        _buildSortMenuItem(
-          SortOption.dateDesc,
-          'Next Bill Date (Farthest)',
-          Icons.calendar_today,
-          themeColors,
-        ),
-      ],
-    ).then((value) {
-      if (value != null) {
-        setState(() {
-          _selectedSort = value;
-        });
-      }
-    });
-  }
-
-  PopupMenuItem<SortOption> _buildSortMenuItem(
-    SortOption value,
-    String label,
-    IconData icon,
-    ThemeColors themeColors,
-  ) {
-    final isSelected = _selectedSort == value;
-    return PopupMenuItem<SortOption>(
-      value: value,
-      height: 48,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 20,
-            color: isSelected ? themeColors.primary : Colors.grey[400],
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? themeColors.primary : Colors.white,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ),
-          if (isSelected)
-            Icon(Icons.check, size: 20, color: themeColors.primary),
-        ],
-      ),
-    );
-  }
-
-  String _getSortLabel() {
-    switch (_selectedSort) {
-      case SortOption.nameAsc:
-        return 'Name (A-Z)';
-      case SortOption.nameDesc:
-        return 'Name (Z-A)';
-      case SortOption.priceAsc:
-        return 'Price ↑';
-      case SortOption.priceDesc:
-        return 'Price ↓';
-      case SortOption.dateAsc:
-        return 'Date ↑';
-      case SortOption.dateDesc:
-        return 'Date ↓';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeColors = context.select<ThemeProvider, ThemeColors>(
@@ -416,8 +277,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           _selectedFilter = filter;
                         });
                       },
-                      onSortPressed: (context) => _showSortMenu(context, themeColors),
-                      sortLabel: _getSortLabel(),
+                      selectedSort: _selectedSort,
+                      onSortChanged: (sort) {
+                        setState(() {
+                          _selectedSort = sort;
+                        });
+                      },
                     ),
                   ),
                   filteredSubscriptions.isEmpty
@@ -514,15 +379,15 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
   final ThemeColors themeColors;
   final String selectedFilter;
   final Function(String) onFilterChanged;
-  final Function(BuildContext) onSortPressed;
-  final String sortLabel;
+  final SortOption selectedSort;
+  final Function(SortOption) onSortChanged;
 
   _FilterBarDelegate({
     required this.themeColors,
     required this.selectedFilter,
     required this.onFilterChanged,
-    required this.onSortPressed,
-    required this.sortLabel,
+    required this.selectedSort,
+    required this.onSortChanged,
   });
 
   @override
@@ -535,14 +400,12 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: themeColors.background,
-      child: Builder(
-        builder: (context) => SubscriptionFilterBar(
-          themeColors: themeColors,
-          selectedFilter: selectedFilter,
-          onFilterChanged: onFilterChanged,
-          onSortPressed: () => onSortPressed(context),
-          sortLabel: sortLabel,
-        ),
+      child: SubscriptionFilterBar(
+        themeColors: themeColors,
+        selectedFilter: selectedFilter,
+        onFilterChanged: onFilterChanged,
+        selectedSort: selectedSort,
+        onSortChanged: onSortChanged,
       ),
     );
   }
@@ -550,6 +413,6 @@ class _FilterBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(_FilterBarDelegate oldDelegate) {
     return selectedFilter != oldDelegate.selectedFilter ||
-        sortLabel != oldDelegate.sortLabel;
+        selectedSort != oldDelegate.selectedSort;
   }
 }

@@ -3,21 +3,47 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../common/app_filter_chip.dart';
 
+enum SortOption {
+  nameAsc,
+  nameDesc,
+  priceAsc,
+  priceDesc,
+  dateAsc,
+  dateDesc,
+}
+
 class SubscriptionFilterBar extends StatelessWidget {
   final ThemeColors themeColors;
   final String selectedFilter;
   final ValueChanged<String> onFilterChanged;
-  final VoidCallback? onSortPressed;
-  final String? sortLabel;
+  final SortOption selectedSort;
+  final ValueChanged<SortOption> onSortChanged;
 
   const SubscriptionFilterBar({
     super.key,
     required this.themeColors,
     required this.selectedFilter,
     required this.onFilterChanged,
-    this.onSortPressed,
-    this.sortLabel,
+    required this.selectedSort,
+    required this.onSortChanged,
   });
+
+  String _getSortLabel() {
+    switch (selectedSort) {
+      case SortOption.nameAsc:
+        return 'Name (A-Z)';
+      case SortOption.nameDesc:
+        return 'Name (Z-A)';
+      case SortOption.priceAsc:
+        return 'Price ↑';
+      case SortOption.priceDesc:
+        return 'Price ↓';
+      case SortOption.dateAsc:
+        return 'Date ↑';
+      case SortOption.dateDesc:
+        return 'Date ↓';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,9 +86,10 @@ class SubscriptionFilterBar extends StatelessWidget {
         ),
         const Spacer(),
         _SortButton(
-          onPressed: onSortPressed,
           themeColors: themeColors,
-          label: sortLabel,
+          label: _getSortLabel(),
+          selectedSort: selectedSort,
+          onSortChanged: onSortChanged,
         ),
       ],
     );
@@ -81,9 +108,10 @@ class SubscriptionFilterBar extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         _SortButton(
-          onPressed: onSortPressed,
           themeColors: themeColors,
-          label: sortLabel,
+          label: _getSortLabel(),
+          selectedSort: selectedSort,
+          onSortChanged: onSortChanged,
         ),
       ],
     );
@@ -313,24 +341,129 @@ class _CustomFilterDropdownState extends State<_CustomFilterDropdown> {
 }
 
 class _SortButton extends StatelessWidget {
-  final VoidCallback? onPressed;
   final ThemeColors themeColors;
-  final String? label;
+  final String label;
+  final SortOption selectedSort;
+  final ValueChanged<SortOption> onSortChanged;
 
   const _SortButton({
-    required this.onPressed,
     required this.themeColors,
-    this.label,
+    required this.label,
+    required this.selectedSort,
+    required this.onSortChanged,
   });
+
+  void _showSortMenu(BuildContext context) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Navigator.of(context).overlay!.context.findRenderObject() as RenderBox;
+    
+    final Offset buttonPosition = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final Size buttonSize = button.size;
+    final Size overlaySize = overlay.size;
+    
+    // Menu dimensions
+    const double menuWidth = 240.0;
+    
+    // Position menu below button, aligned to right edge of button
+    final double top = buttonPosition.dy + buttonSize.height + 8;
+    
+    // Ensure menu doesn't go off left edge
+    final double left = buttonPosition.dx + buttonSize.width - menuWidth;
+    final double adjustedLeft = left < 16 ? 16 : left;
+    final double adjustedRight = overlaySize.width - adjustedLeft - menuWidth;
+
+    showMenu<SortOption>(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        adjustedLeft,
+        top,
+        adjustedRight,
+        overlaySize.height - top,
+      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: themeColors.surface,
+      elevation: 8,
+      constraints: const BoxConstraints(minWidth: 240, maxWidth: 240),
+      items: [
+        _buildSortMenuItem(
+          SortOption.nameAsc,
+          'Name (A-Z)',
+          Icons.sort_by_alpha,
+        ),
+        _buildSortMenuItem(
+          SortOption.nameDesc,
+          'Name (Z-A)',
+          Icons.sort_by_alpha,
+        ),
+        _buildSortMenuItem(
+          SortOption.priceAsc,
+          'Price (Low to High)',
+          Icons.arrow_upward,
+        ),
+        _buildSortMenuItem(
+          SortOption.priceDesc,
+          'Price (High to Low)',
+          Icons.arrow_downward,
+        ),
+        _buildSortMenuItem(
+          SortOption.dateAsc,
+          'Next Bill Date (Nearest)',
+          Icons.calendar_today,
+        ),
+        _buildSortMenuItem(
+          SortOption.dateDesc,
+          'Next Bill Date (Farthest)',
+          Icons.calendar_today,
+        ),
+      ],
+    ).then((value) {
+      if (value != null) {
+        onSortChanged(value);
+      }
+    });
+  }
+
+  PopupMenuItem<SortOption> _buildSortMenuItem(
+    SortOption value,
+    String label,
+    IconData icon,
+  ) {
+    final isSelected = selectedSort == value;
+    return PopupMenuItem<SortOption>(
+      value: value,
+      height: 48,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 20,
+            color: isSelected ? themeColors.primary : Colors.grey[400],
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? themeColors.primary : Colors.white,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ),
+          if (isSelected)
+            Icon(Icons.check, size: 20, color: themeColors.primary),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final showLabel = label != null && kIsWeb;
+    final showLabel = kIsWeb;
     
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onPressed,
+        onTap: () => _showSortMenu(context),
         borderRadius: BorderRadius.circular(12),
         child: Container(
           height: 48,
@@ -361,7 +494,7 @@ class _SortButton extends StatelessWidget {
                 const SizedBox(width: 8),
                 Flexible(
                   child: Text(
-                    label!,
+                    label,
                     style: TextStyle(
                       color: themeColors.primary,
                       fontSize: 14,
