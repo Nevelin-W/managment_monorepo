@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../config/theme.dart';
-import '../utils/app_constants.dart'; // Import your constants
+import '../utils/app_constants.dart';
 import '../widgets/common/bear_logo.dart';
 import '../widgets/common/grid_painter.dart';
 import '../widgets/common/orbital_loading_indicator.dart';
@@ -20,7 +20,6 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
-  late Animation<double> _pulseAnimation;
   bool _navigated = false;
 
   static const _animationDuration = Duration(milliseconds: 1200);
@@ -44,18 +43,7 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeOut,
     );
 
-    _pulseAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut,
-      ),
-    );
-
     _controller.forward();
-    _controller.repeat(reverse: true);
   }
 
   void _scheduleNavigation() {
@@ -68,7 +56,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     final authProvider = context.read<AuthProvider>();
     final route = authProvider.isAuthenticated ? '/home' : '/login';
-    
+
     if (mounted) {
       context.go(route);
     }
@@ -85,12 +73,11 @@ class _SplashScreenState extends State<SplashScreen>
     final themeColors = context.select<ThemeProvider, ThemeColors>(
       (provider) => provider.themeColors,
     );
-    
+
     return Scaffold(
       body: _SplashBody(
         themeColors: themeColors,
         fadeAnimation: _fadeAnimation,
-        pulseAnimation: _pulseAnimation,
       ),
     );
   }
@@ -99,12 +86,10 @@ class _SplashScreenState extends State<SplashScreen>
 class _SplashBody extends StatelessWidget {
   final ThemeColors themeColors;
   final Animation<double> fadeAnimation;
-  final Animation<double> pulseAnimation;
 
   const _SplashBody({
     required this.themeColors,
     required this.fadeAnimation,
-    required this.pulseAnimation,
   });
 
   @override
@@ -135,11 +120,11 @@ class _SplashBody extends StatelessWidget {
   Widget _buildGridBackground() {
     return Positioned.fill(
       child: Opacity(
-        opacity: AppOpacity.subtle, // Using constant
+        opacity: AppOpacity.subtle,
         child: CustomPaint(
           painter: GridPainter(
             color: themeColors.primary,
-            step: AppGridConstants.gridSpacing, // Using constant
+            step: AppGridConstants.gridSpacing,
           ),
         ),
       ),
@@ -148,32 +133,24 @@ class _SplashBody extends StatelessWidget {
 
   Widget _buildGlowEffects(BuildContext context) {
     final size = MediaQuery.of(context).size;
-    
-    return AnimatedBuilder(
-      animation: pulseAnimation,
-      builder: (context, _) {
-        final scale = pulseAnimation.value;
-        final baseSize = AppGridConstants.glowSize; // Using constant
-        
-        return Stack(
-          children: [
-            _buildGlow(
-              top: size.height * 0.2,
-              left: size.width * 0.15,
-              size: baseSize * scale,
-              color: themeColors.primary,
-              opacity: AppOpacity.light * scale, // Using constant
-            ),
-            _buildGlow(
-              bottom: size.height * 0.2,
-              right: size.width * 0.15,
-              size: baseSize * scale,
-              color: themeColors.tertiary,
-              opacity: 0.15 * scale,
-            ),
-          ],
-        );
-      },
+
+    return Stack(
+      children: [
+        _buildGlow(
+          top: size.height * 0.2,
+          left: size.width * 0.15,
+          size: AppGridConstants.glowSize,
+          color: themeColors.primary,
+          opacity: AppOpacity.light,
+        ),
+        _buildGlow(
+          bottom: size.height * 0.2,
+          right: size.width * 0.15,
+          size: AppGridConstants.glowSize,
+          color: themeColors.tertiary,
+          opacity: 0.15,
+        ),
+      ],
     );
   }
 
@@ -215,11 +192,11 @@ class _SplashBody extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildBearLogo(),
-            SizedBox(height: AppSpacing.xxxl + AppSpacing.lg), // Using constants (48)
+            SizedBox(height: AppSpacing.xxxl + AppSpacing.lg),
             _buildBrandName(),
-            SizedBox(height: AppSpacing.lg), // Using constant
+            SizedBox(height: AppSpacing.lg),
             _buildTagline(),
-            SizedBox(height: AppSpacing.xxxl * 2), // Using constant (64)
+            SizedBox(height: AppSpacing.xxxl * 2),
             OrbitalLoadingIndicator(colors: themeColors),
           ],
         ),
@@ -228,45 +205,41 @@ class _SplashBody extends StatelessWidget {
   }
 
   Widget _buildBearLogo() {
-    return AnimatedBuilder(
-      animation: pulseAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: pulseAnimation.value,
-          child: Container(
-            width: 160,
-            height: 160,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  themeColors.primary.withValues(alpha: AppOpacity.light), // Using constant
-                  themeColors.tertiary.withValues(alpha: 0.15),
-                ],
-              ),
-              borderRadius: BorderRadius.circular(AppBorderRadius.cardLarge * 2), // Using constant (40)
-              border: Border.all(
-                color: themeColors.primary.withValues(alpha: AppOpacity.medium + AppOpacity.subtle), // Using constants (0.4)
-                width: 2,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: themeColors.primary.withValues(alpha: AppOpacity.medium + AppOpacity.subtle), // Using constants
-                  blurRadius: 40,
-                  spreadRadius: 0,
-                ),
-              ],
-            ),
-            child: const Center(
-              child: BearLogo(
-                width: 120,
-                height: 120,
-              ),
-            ),
+    return Container(
+      width: 160,
+      height: 160,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            themeColors.primary.withValues(alpha: AppOpacity.light),
+            themeColors.tertiary.withValues(alpha: 0.15),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppBorderRadius.cardLarge * 2),
+        border: Border.all(
+          color: themeColors.primary.withValues(
+            alpha: AppOpacity.medium + AppOpacity.subtle,
           ),
-        );
-      },
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: themeColors.primary.withValues(
+              alpha: AppOpacity.medium + AppOpacity.subtle,
+            ),
+            blurRadius: 40,
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: const Center(
+        child: BearLogo(
+          width: 120,
+          height: 120,
+        ),
+      ),
     );
   }
 
@@ -283,7 +256,7 @@ class _SplashBody extends StatelessWidget {
       child: Text.rich(
         TextSpan(
           style: TextStyle(
-            fontSize: AppFontSize.xxxl + AppBorderRadius.xl, // Using constants (48)
+            fontSize: AppFontSize.xxxl + AppBorderRadius.xl,
             fontFamily: 'monospace',
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -307,7 +280,7 @@ class _SplashBody extends StatelessWidget {
       '> Just the essentials_',
       style: TextStyle(
         color: themeColors.primary,
-        fontSize: AppFontSize.caption, // Using constant
+        fontSize: AppFontSize.caption,
         fontFamily: 'monospace',
         letterSpacing: 2,
         fontWeight: FontWeight.w500,
@@ -325,7 +298,7 @@ class _SplashBody extends StatelessWidget {
               radius: 1.0,
               colors: [
                 Colors.transparent,
-                Colors.black.withValues(alpha: AppOpacity.medium), // Using constant
+                Colors.black.withValues(alpha: AppOpacity.medium),
               ],
             ),
           ),

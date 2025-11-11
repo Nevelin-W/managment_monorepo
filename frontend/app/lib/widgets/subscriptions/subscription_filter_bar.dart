@@ -8,6 +8,7 @@ class SubscriptionFilterBar extends StatelessWidget {
   final String selectedFilter;
   final ValueChanged<String> onFilterChanged;
   final VoidCallback? onSortPressed;
+  final String? sortLabel;
 
   const SubscriptionFilterBar({
     super.key,
@@ -15,6 +16,7 @@ class SubscriptionFilterBar extends StatelessWidget {
     required this.selectedFilter,
     required this.onFilterChanged,
     this.onSortPressed,
+    this.sortLabel,
   });
 
   @override
@@ -57,9 +59,10 @@ class SubscriptionFilterBar extends StatelessWidget {
           onTap: () => onFilterChanged('Weekly'),
         ),
         const Spacer(),
-        IconButton(
-          icon: Icon(Icons.sort, color: themeColors.primary, size: 24),
+        _SortButton(
           onPressed: onSortPressed,
+          themeColors: themeColors,
+          label: sortLabel,
         ),
       ],
     );
@@ -77,22 +80,10 @@ class SubscriptionFilterBar extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 12),
-        Container(
-          height: 48,
-          width: 48,
-          decoration: BoxDecoration(
-            color: themeColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: themeColors.primary.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: IconButton(
-            icon: Icon(Icons.sort, color: themeColors.primary, size: 22),
-            onPressed: onSortPressed,
-            tooltip: 'Sort',
-          ),
+        _SortButton(
+          onPressed: onSortPressed,
+          themeColors: themeColors,
+          label: sortLabel,
         ),
       ],
     );
@@ -313,6 +304,73 @@ class _CustomFilterDropdownState extends State<_CustomFilterDropdown> {
                   size: 24,
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SortButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final ThemeColors themeColors;
+  final String? label;
+
+  const _SortButton({
+    required this.onPressed,
+    required this.themeColors,
+    this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final showLabel = label != null && kIsWeb;
+    
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 48,
+          padding: EdgeInsets.symmetric(
+            horizontal: showLabel ? 16 : 12,
+          ),
+          constraints: BoxConstraints(
+            minWidth: showLabel ? 120 : 48,
+          ),
+          decoration: BoxDecoration(
+            color: themeColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: themeColors.primary.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.sort,
+                size: 22,
+                color: themeColors.primary,
+              ),
+              if (showLabel) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    label!,
+                    style: TextStyle(
+                      color: themeColors.primary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
