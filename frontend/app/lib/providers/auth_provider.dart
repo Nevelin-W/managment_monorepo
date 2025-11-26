@@ -116,4 +116,20 @@ class AuthProvider with ChangeNotifier {
     _error = null;
     notifyListeners();
   }
+
+   /// Refresh current user data from server
+  Future<void> refreshUser() async {
+    _log.info('Refreshing user data');
+    
+    try {
+      _user = await _authService.getCurrentUser();
+      if (_user != null) {
+        _log.info('User data refreshed', {'userId': _user!.id});
+      }
+      notifyListeners();
+    } catch (e, stackTrace) {
+      _log.error('Failed to refresh user data', error: e, stackTrace: stackTrace);
+      // Don't throw - just log the error
+    }
+  }
 }

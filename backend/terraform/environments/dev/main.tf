@@ -83,6 +83,10 @@ module "api" {
   lambda_subs_update_name            = module.lambda.subs_update_name
   lambda_subs_delete_name            = module.lambda.subs_delete_name
   user_pool_arn                      = module.auth.user_pool_arn
+  lambda_auth_update_profile_invoke_arn   = module.lambda.auth_update_profile_function.invoke_arn
+  lambda_auth_update_profile_name  = module.lambda.auth_update_profile_function.function_name
+  lambda_auth_change_password_invoke_arn = module.lambda.auth_change_password_function.invoke_arn
+  lambda_auth_change_password_name       = module.lambda.auth_change_password_function.function_name
 }
 
 # Email Processing Module

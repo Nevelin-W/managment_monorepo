@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
+import '../services/theme_storage_service.dart';
+import '../utils/app_logger.dart';
 
 enum AppThemeType {
   emerald,
@@ -11,9 +13,37 @@ enum AppThemeType {
 }
 
 class ThemeProvider extends ChangeNotifier {
+  static final _log = AppLogger.scope('ThemeProvider');
+  
   AppThemeType _currentTheme = AppThemeType.sunset;
+  bool _isInitialized = false;
   
   AppThemeType get currentTheme => _currentTheme;
+  bool get isInitialized => _isInitialized;
+  
+  ThemeProvider() {
+    _initializeTheme();
+  }
+  
+  /// Initialize theme from storage on app start
+  Future<void> _initializeTheme() async {
+    try {
+      final savedTheme = await ThemeStorageService.loadTheme();
+      
+      if (savedTheme != null) {
+        _currentTheme = savedTheme;
+        _log.info('Theme initialized from storage', {'theme': savedTheme.name});
+      } else {
+        _log.debug('No saved theme, using default: ${_currentTheme.name}');
+      }
+    } catch (e, stackTrace) {
+      _log.error('Error initializing theme', error: e, stackTrace: stackTrace);
+      // Continue with default theme
+    } finally {
+      _isInitialized = true;
+      notifyListeners();
+    }
+  }
   
   ThemeData get themeData {
     switch (_currentTheme) {
@@ -66,11 +96,21 @@ class ThemeProvider extends ChangeNotifier {
     }
   }
   
-  void setTheme(AppThemeType theme) {
+  /// Set theme and persist to storage
+  Future<void> setTheme(AppThemeType theme, {bool persist = true}) async {
+    if (_currentTheme == theme) return;
+    
     _currentTheme = theme;
     notifyListeners();
+    
+    if (persist) {
+      final success = await ThemeStorageService.saveTheme(theme);
+      if (!success) {
+        _log.warning('Failed to persist theme change', {'theme': theme.name});
+      }
+    }
   }
   
-  // Get all available themes for UI picker
+  /// Get all available themes for UI picker
   List<AppThemeType> get availableThemes => AppThemeType.values;
 }

@@ -25,18 +25,15 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Check again when dependencies change (e.g., when navigating back)
     _checkAndRedirect();
   }
 
   void _checkAndRedirect() {
-    // Use addPostFrameCallback to ensure the build is complete
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
       final authProvider = context.read<AuthProvider>();
 
-      // If user is already authenticated, redirect to home
       if (authProvider.isAuthenticated) {
         context.go('/home');
       }
@@ -49,12 +46,10 @@ class _LoginScreenState extends State<LoginScreen> {
       (provider) => provider.themeColors,
     );
 
-    // Listen to auth changes and redirect if authenticated
     final isAuthenticated = context.select<AuthProvider, bool>(
       (provider) => provider.isAuthenticated,
     );
 
-    // If authenticated during build, schedule redirect
     if (isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {

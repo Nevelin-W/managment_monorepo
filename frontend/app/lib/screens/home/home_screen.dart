@@ -11,7 +11,15 @@ import '../../widgets/common/subscription_card.dart';
 import '../../widgets/common/stat_card.dart';
 import '../../widgets/common/empty_state.dart';
 import '../../widgets/common/screen_background.dart';
+import '../../widgets/common/orbital_loading_indicator.dart';
 import '../../models/subscription_model.dart';
+import 'dart:math' as math;
+
+enum SubscriptionFilter {
+  mostExpensive,
+  upcoming,
+  recent,
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,10 +29,11 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  SubscriptionFilter _selectedFilter = SubscriptionFilter.upcoming;
+
   @override
   void initState() {
     super.initState();
-    // Fetch subscriptions after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<SubscriptionProvider>().fetchSubscriptions();
@@ -48,7 +57,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _confirmDelete(Subscription subscription) async {
     if (!mounted) return;
-    
+
     final themeColors = context.read<ThemeProvider>().themeColors;
     final confirmed = await showDialog<bool>(
       context: context,
@@ -110,9 +119,25 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  List<Subscription> _getFilteredSubscriptions(List<Subscription> subs) {
+    switch (_selectedFilter) {
+      case SubscriptionFilter.mostExpensive:
+        final sorted = List<Subscription>.from(subs);
+        sorted.sort((a, b) => b.amount.compareTo(a.amount));
+        return sorted.take(5).toList();
+      case SubscriptionFilter.upcoming:
+        final sorted = List<Subscription>.from(subs);
+        sorted.sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
+        return sorted.take(5).toList();
+      case SubscriptionFilter.recent:
+        final sorted = List<Subscription>.from(subs);
+        sorted.sort((a, b) => b.id.compareTo(a.id));
+        return sorted.take(5).toList();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Use select to only rebuild when themeColors change
     final themeColors = context.select<ThemeProvider, ThemeColors>(
       (provider) => provider.themeColors,
     );
@@ -126,27 +151,18 @@ class _HomeScreenState extends State<HomeScreen> {
             builder: (context, authProvider, subProvider, _) {
               if (subProvider.isLoading) {
                 return Center(
-                  child: CircularProgressIndicator(
-                    valueColor:
-                        AlwaysStoppedAnimation<Color>(themeColors.primary),
+                  child: OrbitalLoadingIndicator(
+                    colors: themeColors,
+                    size: 100,
                   ),
                 );
               }
 
               return CustomScrollView(
                 slivers: [
-                  _HomeAppBar(
+                  _ModernAppBar(
                     userName: authProvider.user?.name ?? "User",
                     themeColors: themeColors,
-                  ),
-                  _StatsSection(
-                    themeColors: themeColors,
-                    activeCount: subProvider.subscriptions.length,
-                    monthlySpend: subProvider.totalMonthlySpend,
-                  ),
-                  _SubscriptionsHeader(
-                    themeColors: themeColors,
-                    hasSubscriptions: subProvider.subscriptions.isNotEmpty,
                   ),
                   if (subProvider.subscriptions.isEmpty)
                     SliverFillRemaining(
@@ -155,13 +171,28 @@ class _HomeScreenState extends State<HomeScreen> {
                         onAddPressed: _showAddSubscriptionDialog,
                       ),
                     )
-                  else
-                    _SubscriptionsList(
-                      subscriptions: subProvider.subscriptions.take(3).toList(),
+                  else ...[
+                    _CompactStatsGrid(
                       themeColors: themeColors,
+                      subscriptions: subProvider.subscriptions,
+                    ),
+                    _SpendingOverview(
+                      themeColors: themeColors,
+                      subscriptions: subProvider.subscriptions,
+                    ),
+                    _SubscriptionsSection(
+                      themeColors: themeColors,
+                      subscriptions:
+                          _getFilteredSubscriptions(subProvider.subscriptions),
+                      selectedFilter: _selectedFilter,
+                      onFilterChanged: (filter) {
+                        setState(() => _selectedFilter = filter);
+                      },
                       onEdit: _showEditSubscriptionDialog,
                       onDelete: _confirmDelete,
+                      onViewAll: () => context.go('/home/subscriptions'),
                     ),
+                  ],
                 ],
               );
             },
@@ -173,203 +204,609 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: themeColors.primary,
         elevation: 8,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add Subscription',
+        label: const Text('Add',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
 }
 
-/// Extracted App Bar widget for better performance
-class _HomeAppBar extends StatelessWidget {
+class _ModernAppBar extends StatelessWidget {
   final String userName;
   final ThemeColors themeColors;
 
-  const _HomeAppBar({
+  const _ModernAppBar({
     required this.userName,
     required this.themeColors,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SliverAppBar(
-      expandedHeight: 180,
-      floating: false,
-      pinned: true,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      flexibleSpace: FlexibleSpaceBar(
-        background: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 60, 24, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hi, $userName',
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Manage your subscriptions',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[400],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Row(
+              children: [
+                _IconButton(
+                  icon: Icons.settings_outlined,
+                  onPressed: () => context.go('/home/settings'),
+                  themeColors: themeColors,
+                ),
+                const SizedBox(width: 8),
+                _IconButton(
+                  icon: Icons.logout,
+                  onPressed: () async {
+                    await context.read<AuthProvider>().logout();
+                    if (context.mounted) {
+                      context.go('/login');
+                    }
+                  },
+                  themeColors: themeColors,
+                  color: themeColors.primary,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final ThemeColors themeColors;
+  final Color? color;
+
+  const _IconButton({
+    required this.icon,
+    required this.onPressed,
+    required this.themeColors,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: themeColors.surface.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+        ),
+      ),
+      child: IconButton(
+        icon: Icon(icon, color: color ?? Colors.grey[400], size: 20),
+        onPressed: onPressed,
+        padding: const EdgeInsets.all(8),
+        constraints: const BoxConstraints(),
+      ),
+    );
+  }
+}
+
+class _CompactStatsGrid extends StatelessWidget {
+  final ThemeColors themeColors;
+  final List<Subscription> subscriptions;
+
+  const _CompactStatsGrid({
+    required this.themeColors,
+    required this.subscriptions,
+  });
+
+  double get _totalMonthlySpend {
+    return subscriptions.fold(0.0, (sum, sub) => sum + sub.amount);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                themeColors.primary.withValues(alpha: 0.15),
+                themeColors.secondary.withValues(alpha: 0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
             children: [
-              Text(
-                'Welcome back,',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey[400],
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: _StatItem(
+                  label: 'Active',
+                  value: subscriptions.length.toString(),
+                  icon: Icons.subscriptions_outlined,
+                  themeColors: themeColors,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                userName,
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                  letterSpacing: -0.5,
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              Expanded(
+                child: _StatItem(
+                  label: 'Monthly',
+                  value: '\$${_totalMonthlySpend.toStringAsFixed(0)}',
+                  icon: Icons.payments_outlined,
+                  themeColors: themeColors,
+                ),
+              ),
+              Container(
+                width: 1,
+                height: 40,
+                color: Colors.white.withValues(alpha: 0.1),
+              ),
+              Expanded(
+                child: _StatItem(
+                  label: 'Yearly',
+                  value: '\$${(_totalMonthlySpend * 12).toStringAsFixed(0)}',
+                  icon: Icons.calendar_today_outlined,
+                  themeColors: themeColors,
                 ),
               ),
             ],
           ),
         ),
       ),
-      actions: [
-        IconButton(
-          icon: Icon(Icons.settings_outlined, color: Colors.grey[400]),
-          onPressed: () => context.go('/home/settings'),
+    );
+  }
+}
+
+class _StatItem extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final ThemeColors themeColors;
+
+  const _StatItem({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.themeColors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: themeColors.primary, size: 20),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
-        IconButton(
-          icon: Icon(Icons.logout, color: themeColors.primary),
-          onPressed: () async {
-            await context.read<AuthProvider>().logout();
-            if (context.mounted) {
-              context.go('/login');
-            }
-          },
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[400],
+          ),
         ),
       ],
     );
   }
 }
 
-/// Extracted stats section for better performance
-class _StatsSection extends StatelessWidget {
+class _SpendingOverview extends StatelessWidget {
   final ThemeColors themeColors;
-  final int activeCount;
-  final double monthlySpend;
-
-  const _StatsSection({
-    required this.themeColors,
-    required this.activeCount,
-    required this.monthlySpend,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-        child: Row(
-          children: [
-            Expanded(
-              child: StatCard(
-                title: 'Active',
-                value: activeCount.toString(),
-                icon: Icons.subscriptions_outlined,
-                themeColors: themeColors,
-                gradientColors: [themeColors.primary, themeColors.secondary],
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: StatCard(
-                title: 'Monthly',
-                value: '\$${monthlySpend.toStringAsFixed(0)}',
-                icon: Icons.payments_outlined,
-                themeColors: themeColors,
-                gradientColors: [themeColors.secondary, themeColors.tertiary],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Extracted header section
-class _SubscriptionsHeader extends StatelessWidget {
-  final ThemeColors themeColors;
-  final bool hasSubscriptions;
-
-  const _SubscriptionsHeader({
-    required this.themeColors,
-    required this.hasSubscriptions,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Your Subscriptions',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            if (hasSubscriptions)
-              TextButton.icon(
-                onPressed: () => context.go('/home/subscriptions'),
-                icon: Icon(Icons.arrow_forward,
-                    size: 16, color: themeColors.primary),
-                label: Text(
-                  'View All',
-                  style: TextStyle(
-                      color: themeColors.primary, fontWeight: FontWeight.w600),
-                ),
-                style: TextButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Extracted subscriptions list with keys for efficient updates
-class _SubscriptionsList extends StatelessWidget {
   final List<Subscription> subscriptions;
+
+  const _SpendingOverview({
+    required this.themeColors,
+    required this.subscriptions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nextRenewal = _getNextRenewal();
+    final mostExpensive = _getMostExpensive();
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        child: Column(
+          children: [
+            if (nextRenewal != null)
+              _InsightCard(
+                icon: Icons.schedule,
+                title: 'Next Renewal',
+                subtitle:
+                    '${nextRenewal.name} • ${_getDaysUntil(nextRenewal.nextBillingDate)} days',
+                amount: '\$${nextRenewal.amount.toStringAsFixed(2)}',
+                themeColors: themeColors,
+                gradientColors: [
+                  themeColors.secondary.withValues(alpha: 0.2),
+                  themeColors.tertiary.withValues(alpha: 0.1),
+                ],
+              ),
+            if (nextRenewal != null && mostExpensive != null)
+              const SizedBox(height: 12),
+            if (mostExpensive != null)
+              _InsightCard(
+                icon: Icons.trending_up,
+                title: 'Highest Cost',
+                subtitle: mostExpensive.name,
+                amount: '\$${mostExpensive.amount.toStringAsFixed(2)}/mo',
+                themeColors: themeColors,
+                gradientColors: [
+                  themeColors.primary.withValues(alpha: 0.2),
+                  themeColors.secondary.withValues(alpha: 0.1),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Subscription? _getNextRenewal() {
+    if (subscriptions.isEmpty) return null;
+    final sorted = List<Subscription>.from(subscriptions);
+    sorted.sort((a, b) => a.nextBillingDate.compareTo(b.nextBillingDate));
+    return sorted.first;
+  }
+
+  Subscription? _getMostExpensive() {
+    if (subscriptions.isEmpty) return null;
+    return subscriptions.reduce((a, b) => a.amount > b.amount ? a : b);
+  }
+
+  int _getDaysUntil(DateTime date) {
+    return date.difference(DateTime.now()).inDays;
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final String amount;
   final ThemeColors themeColors;
+  final List<Color> gradientColors;
+
+  const _InsightCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.amount,
+    required this.themeColors,
+    required this.gradientColors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradientColors,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: themeColors.primary.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: themeColors.primary, size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[400],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            amount,
+            style: TextStyle(
+              fontSize: 16,
+              color: themeColors.primary,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubscriptionsSection extends StatelessWidget {
+  final ThemeColors themeColors;
+  final List<Subscription> subscriptions;
+  final SubscriptionFilter selectedFilter;
+  final Function(SubscriptionFilter) onFilterChanged;
   final void Function(Subscription) onEdit;
   final void Function(Subscription) onDelete;
+  final VoidCallback onViewAll;
 
-  const _SubscriptionsList({
-    required this.subscriptions,
+  const _SubscriptionsSection({
     required this.themeColors,
+    required this.subscriptions,
+    required this.selectedFilter,
+    required this.onFilterChanged,
     required this.onEdit,
     required this.onDelete,
+    required this.onViewAll,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final sub = subscriptions[index];
-            return SubscriptionCard(
-              key: ValueKey(sub.id), // Key for efficient updates
-              subscription: sub,
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(24, 28, 24, 100),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Subscriptions',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                _ViewAllButtonWidget(
+                  onTap: onViewAll,
+                  themeColors: themeColors,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _FilterChips(
+              selectedFilter: selectedFilter,
+              onFilterChanged: onFilterChanged,
               themeColors: themeColors,
-              isCompact: true,
-              onEdit: () => onEdit(sub),
-              onDelete: () => onDelete(sub),
-            );
-          },
-          childCount: subscriptions.length,
+            ),
+            const SizedBox(height: 16),
+            ...subscriptions.map((sub) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SubscriptionCard(
+                    key: ValueKey(sub.id),
+                    subscription: sub,
+                    themeColors: themeColors,
+                    isCompact: true,
+                    onEdit: () => onEdit(sub),
+                    onDelete: () => onDelete(sub),
+                  ),
+                )),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChips extends StatelessWidget {
+  final SubscriptionFilter selectedFilter;
+  final Function(SubscriptionFilter) onFilterChanged;
+  final ThemeColors themeColors;
+
+  const _FilterChips({
+    required this.selectedFilter,
+    required this.onFilterChanged,
+    required this.themeColors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _FilterChip(
+          label: 'Upcoming',
+          icon: Icons.schedule,
+          isSelected: selectedFilter == SubscriptionFilter.upcoming,
+          onTap: () => onFilterChanged(SubscriptionFilter.upcoming),
+          themeColors: themeColors,
+        ),
+        const SizedBox(width: 8),
+        _FilterChip(
+          label: 'Most Expensive',
+          icon: Icons.trending_up,
+          isSelected: selectedFilter == SubscriptionFilter.mostExpensive,
+          onTap: () => onFilterChanged(SubscriptionFilter.mostExpensive),
+          themeColors: themeColors,
+        ),
+        const SizedBox(width: 8),
+        _FilterChip(
+          label: 'Recent',
+          icon: Icons.access_time,
+          isSelected: selectedFilter == SubscriptionFilter.recent,
+          onTap: () => onFilterChanged(SubscriptionFilter.recent),
+          themeColors: themeColors,
+        ),
+      ],
+    );
+  }
+}
+
+class _ViewAllButtonWidget extends StatefulWidget {
+  final VoidCallback onTap;
+  final ThemeColors themeColors;
+
+  const _ViewAllButtonWidget({
+    required this.onTap,
+    required this.themeColors,
+  });
+
+  @override
+  State<_ViewAllButtonWidget> createState() => _ViewAllButtonWidgetState();
+}
+
+class _ViewAllButtonWidgetState extends State<_ViewAllButtonWidget> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: widget.themeColors.surface.withValues(
+              alpha: _isHovered ? 0.45 : 0.3,
+            ),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+            ),
+          ),
+          child: Row(
+            children: [
+              Text(
+                'View All',
+                style: TextStyle(
+                  color: widget.themeColors.primary,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Icon(
+                Icons.arrow_forward,
+                size: 14,
+                color: widget.themeColors.primary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final ThemeColors themeColors;
+
+  const _FilterChip({
+    required this.label,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+    required this.themeColors,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [
+                    themeColors.primary.withValues(alpha: 0.3),
+                    themeColors.secondary.withValues(alpha: 0.2),
+                  ],
+                )
+              : null,
+          color: isSelected ? null : themeColors.surface.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? themeColors.primary.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: isSelected ? themeColors.primary : Colors.grey[400],
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.grey[400],
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontSize: 13,
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -287,4 +287,116 @@ class AuthService {
       rethrow;
     }
   }
+
+  // Add this method to your existing AuthService class
+
+  /// Update user profile information
+  Future<bool> updateProfile({String? name}) async {
+    _log.info('Profile update attempt');
+    
+    try {
+      final token = await _readToken('auth_token');
+      if (token == null) {
+        _log.warning('No auth token found for profile update');
+        throw Exception('Not authenticated');
+      }
+
+      final Map<String, dynamic> updateData = {};
+      if (name != null) {
+        updateData['name'] = name;
+        _log.debug('Updating name');
+      }
+
+      if (updateData.isEmpty) {
+        _log.debug('No fields to update');
+        return true;
+      }
+
+      final requestBody = jsonEncode(updateData);
+
+      _log.debug('Sending profile update request');
+
+      final response = await http.put(
+        Uri.parse(AppConfig.authUpdateProfileUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: requestBody,
+      );
+
+      _log.debug('Profile update response received', {
+        'statusCode': response.statusCode,
+      });
+
+      if (response.statusCode == 200) {
+        _log.info('Profile updated successfully');
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        final errorMsg = error['error'] ?? 'Profile update failed';
+        _log.warning('Profile update failed', {
+          'error': errorMsg,
+          'statusCode': response.statusCode,
+        });
+        throw Exception(errorMsg);
+      }
+    } catch (e, stackTrace) {
+      _log.error('Profile update error', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+  Future<bool> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    _log.info('Password change attempt');
+    
+    try {
+      final token = await _readToken('auth_token');
+      if (token == null) {
+        _log.warning('No auth token found for password change');
+        throw Exception('Not authenticated');
+      }
+
+      final requestBody = jsonEncode({
+        'oldPassword': oldPassword,
+        'newPassword': newPassword,
+      });
+
+      _log.debug('Sending password change request', {
+        'oldPassword': LogSanitizer.password(),
+        'newPassword': LogSanitizer.password(),
+      });
+
+      final response = await http.post(
+        Uri.parse(AppConfig.authChangePasswordUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: requestBody,
+      );
+
+      _log.debug('Password change response received', {
+        'statusCode': response.statusCode,
+      });
+
+      if (response.statusCode == 200) {
+        _log.info('Password changed successfully');
+        return true;
+      } else {
+        final error = jsonDecode(response.body);
+        final errorMsg = error['error'] ?? 'Password change failed';
+        _log.warning('Password change failed', {
+          'error': errorMsg,
+          'statusCode': response.statusCode,
+        });
+        throw Exception(errorMsg);
+      }
+    } catch (e, stackTrace) {
+      _log.error('Password change error', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
 }

@@ -100,3 +100,24 @@ variable "lambda_subs_delete_name" {
   description = "Subscriptions delete Lambda function name"
   type        = string
 }
+
+variable "lambda_auth_update_profile_invoke_arn" {
+  description = "Auth update profile Lambda function name"
+  type        = string
+  
+}
+
+variable "lambda_auth_update_profile_name" {
+  description = "Auth update profile Lambda function ARN"
+  type        = string
+  
+}
+
+variable "lambda_auth_change_password_invoke_arn" {
+  description = "Auth change password Lambda invoke ARN"
+  type        = string
+}
+variable "lambda_auth_change_password_name" {
+  description = "Auth change password Lambda function name"
+  type        = string
+}

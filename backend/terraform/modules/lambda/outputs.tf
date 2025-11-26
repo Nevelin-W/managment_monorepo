@@ -78,3 +78,21 @@ output "email_processor_arn" {
 output "email_processor_name" {
   value = aws_lambda_function.email_processor.function_name
 }
+
+output "auth_update_profile_function" {
+  description = "Auth update profile Lambda function"
+  value = {
+    arn           = aws_lambda_function.auth_update_profile.arn
+    function_name = aws_lambda_function.auth_update_profile.function_name
+    invoke_arn    = aws_lambda_function.auth_update_profile.invoke_arn
+  }
+}
+
+output "auth_change_password_function" {
+  description = "Auth change password Lambda function"
+  value = {
+    arn           = aws_lambda_function.auth_change_password.arn
+    function_name = aws_lambda_function.auth_change_password.function_name
+    invoke_arn    = aws_lambda_function.auth_change_password.invoke_arn
+  }
+}

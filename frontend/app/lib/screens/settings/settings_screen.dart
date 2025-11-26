@@ -11,6 +11,10 @@ import '../../widgets/settings/settings_card.dart';
 import '../../widgets/settings/settings_tile.dart';
 import '../../widgets/settings/settings_divider.dart';
 import '../../widgets/settings/settings_section.dart';
+import '../../widgets/settings/settings_profile_card.dart';
+import '../../widgets/settings/theme_picker_dialog.dart';
+import '../../widgets/settings/edit_profile_dialog.dart';
+import '../../widgets/settings/change_password_dialog.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -22,11 +26,13 @@ class SettingsScreen extends StatelessWidget {
       builder: (context) => AlertDialog(
         backgroundColor: themeColors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title:
-            const Text('Delete Account', style: TextStyle(color: Colors.white)),
+        title: const Text(
+          'Delete Account',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         content: Text(
           'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.',
-          style: TextStyle(color: Colors.grey[400]),
+          style: TextStyle(color: Colors.grey[400], height: 1.5),
         ),
         actions: [
           TextButton(
@@ -35,70 +41,51 @@ class SettingsScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            ),
+            child: const Text(
+              'Delete',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
 
     if (confirmed == true && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Account deletion not implemented yet'),
-          backgroundColor: themeColors.primary,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+      _showSnackBar(
+        context,
+        'Account deletion not implemented yet',
+        themeColors,
       );
     }
   }
 
+  Future<void> _showEditProfileDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const EditProfileDialog(),
+    );
+  }
+
+  Future<void> _showChangePasswordDialog(BuildContext context) async {
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const ChangePasswordDialog(),
+    );
+  }
+
   Future<void> _showThemePickerDialog(BuildContext context) async {
     final themeProvider = context.read<ThemeProvider>();
-    final themeColors = themeProvider.themeColors;
 
     await showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          backgroundColor: themeColors.surface,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title:
-              const Text('Choose Theme', style: TextStyle(color: Colors.white)),
-          content: SingleChildScrollView(
-            child: Column(
-              children: themeProvider.availableThemes.map((themeType) {
-                final themeName = themeType.name[0].toUpperCase() +
-                    themeType.name.substring(1);
-                final selected = themeProvider.currentTheme == themeType;
-
-                return ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    themeName,
-                    style: TextStyle(
-                      color: selected ? themeColors.primary : Colors.grey[300],
-                      fontWeight:
-                          selected ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                  trailing: selected
-                      ? Icon(Icons.check_circle, color: themeColors.primary)
-                      : null,
-                  onTap: () {
-                    themeProvider.setTheme(themeType);
-                    Navigator.of(context).pop();
-                  },
-                );
-              }).toList(),
-            ),
-          ),
-        );
-      },
+      barrierDismissible: false,
+      builder: (context) => ThemePickerDialog(themeProvider: themeProvider),
     );
   }
 
@@ -107,6 +94,8 @@ class SettingsScreen extends StatelessWidget {
     final themeColors = context.watch<ThemeProvider>().themeColors;
     final authProvider = context.watch<AuthProvider>();
     final user = authProvider.user;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isWeb = screenWidth > 600;
 
     return Scaffold(
       backgroundColor: themeColors.background,
@@ -117,318 +106,81 @@ class SettingsScreen extends StatelessWidget {
             end: Alignment.bottomRight,
             colors: [
               themeColors.background,
-              themeColors.surface,
+              themeColors.surface.withValues(alpha: 0.3),
               themeColors.background,
             ],
           ),
         ),
         child: Stack(
           children: [
-            // Subtle grid background
+            // Animated grid background
             Positioned.fill(
               child: Opacity(
                 opacity: 0.03,
                 child: CustomPaint(
                   painter: GridPainter(
                     color: themeColors.primary,
-                    step: 50,
+                    step: isWeb ? 60 : 50,
                     strokeWidth: 1,
                   ),
                 ),
               ),
             ),
 
-            // Glow effects
-            Positioned(
+            // Gradient orbs
+            _buildGradientOrb(
               top: -100,
               right: -100,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      themeColors.primary.withValues(alpha: 0.1),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
+              size: 250,
+              colors: [
+                themeColors.primary.withValues(alpha: 0.15),
+                Colors.transparent,
+              ],
+            ),
+            _buildGradientOrb(
+              bottom: -150,
+              left: -100,
+              size: 300,
+              colors: [
+                themeColors.secondary.withValues(alpha: 0.1),
+                Colors.transparent,
+              ],
             ),
 
             // Main content
             SafeArea(
               child: CustomScrollView(
                 slivers: [
-                  // App Bar
-                  SliverAppBar(
-                    expandedHeight: 140,
-                    floating: false,
-                    pinned: true,
-                    backgroundColor: themeColors.background,
-                    surfaceTintColor: Colors.transparent,
-                    foregroundColor: Colors.transparent,
-                    elevation: 0,
-                    leading: Padding(
-                      padding: const EdgeInsets.only(left: 4.0),
-                      child: IconButton(
-                        icon: Icon(Icons.arrow_back, color: Colors.grey[400]),
-                        onPressed: () => context.go('/home'),
-                      ),
-                    ),
-                    flexibleSpace: FlexibleSpaceBar(
-                      titlePadding: const EdgeInsets.only(left: 60, bottom: 16),
-                      title: LayoutBuilder(
-                        builder: (context, constraints) {
-                          final isCollapsed = constraints.maxHeight <= 100;
-                          return AnimatedOpacity(
-                            opacity: isCollapsed ? 1.0 : 0.0,
-                            duration: const Duration(milliseconds: 200),
-                            child: const Text(
-                              'Settings',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.white,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                      background: Align(
-                        alignment: Alignment.bottomLeft,
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Settings',
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Manage your account and preferences',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[400],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                  // Modern App Bar
+                  _buildAppBar(context, themeColors, isWeb),
+
+                  // Profile Card
+                  SliverToBoxAdapter(
+                    child:                     SettingsProfileCard(
+                      user: user,
+                      themeColors: themeColors,
+                      onTap: () => _showEditProfileDialog(context),
                     ),
                   ),
 
-                  // Profile Section
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                      child: SettingsCard(
-                        themeColors: themeColors,
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 64,
-                                height: 64,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      themeColors.primary,
-                                      themeColors.secondary
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(20),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: themeColors.primary
-                                          .withValues(alpha: 0.3),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: const Center(
-                                  child: Icon(Icons.person,
-                                      color: Colors.white, size: 32),
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      user?.name ?? 'User',
-                                      style: const TextStyle(
-                                          fontSize: 20,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      user?.email ?? 'user@example.com',
-                                      style: TextStyle(
-                                          fontSize: 14,
-                                          color: Colors.grey[400]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Quick Actions (Web only)
+                  if (isWeb) _buildQuickActions(context, themeColors),
 
                   // Account Section
-                  SliverToBoxAdapter(
-                    child: SettingsSection(
-                      title: 'ACCOUNT',
-                      themeColors: themeColors,
-                      children: [
-                        SettingsTile(
-                          icon: Icons.person_outline,
-                          title: 'Edit Profile',
-                          subtitle: 'Update your personal information',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(context, themeColors,
-                              'Edit profile not implemented'),
-                        ),
-                        SettingsDivider(themeColors: themeColors),
-                        SettingsTile(
-                          icon: Icons.lock_outline,
-                          title: 'Change Password',
-                          subtitle: 'Update your password',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(context, themeColors,
-                              'Change password not implemented'),
-                        ),
-                        SettingsDivider(themeColors: themeColors),
-                        SettingsTile(
-                          icon: Icons.email_outlined,
-                          title: 'Email Preferences',
-                          subtitle: 'Manage email notifications',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(context, themeColors,
-                              'Email preferences not implemented'),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildAccountSection(context, themeColors),
 
                   // Preferences Section
-                  SliverToBoxAdapter(
-                    child: SettingsSection(
-                      title: 'PREFERENCES',
-                      themeColors: themeColors,
-                      children: [
-                        SettingsTile(
-                          icon: Icons.notifications_outlined,
-                          title: 'Notifications',
-                          subtitle: 'Manage app notifications',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(context, themeColors,
-                              'Notifications not implemented'),
-                        ),
-                        SettingsDivider(themeColors: themeColors),
-                        SettingsTile(
-                          icon: Icons.palette_outlined,
-                          title: 'Appearance',
-                          subtitle: 'Current: ${context.watch<ThemeProvider>().themeName}',
-                          themeColors: themeColors,
-                          onTap: () => _showThemePickerDialog(context),
-                        ),
-                        SettingsDivider(themeColors: themeColors),
-                        SettingsTile(
-                          icon: Icons.language_outlined,
-                          title: 'Language',
-                          subtitle: 'English',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(
-                              context, themeColors, 'Language not implemented'),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildPreferencesSection(context, themeColors),
 
                   // Support Section
-                  SliverToBoxAdapter(
-                    child: SettingsSection(
-                      title: 'SUPPORT',
-                      themeColors: themeColors,
-                      children: [
-                        SettingsTile(
-                          icon: Icons.help_outline,
-                          title: 'Help Center',
-                          subtitle: 'Get help and support',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(context, themeColors,
-                              'Help Center not implemented'),
-                        ),
-                        SettingsDivider(themeColors: themeColors),
-                        SettingsTile(
-                          icon: Icons.privacy_tip_outlined,
-                          title: 'Privacy Policy',
-                          subtitle: 'View our privacy policy',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(context, themeColors,
-                              'Privacy Policy not implemented'),
-                        ),
-                        SettingsDivider(themeColors: themeColors),
-                        SettingsTile(
-                          icon: Icons.description_outlined,
-                          title: 'Terms of Service',
-                          subtitle: 'View our terms of service',
-                          themeColors: themeColors,
-                          onTap: () => _showSnack(context, themeColors,
-                              'Terms of Service not implemented'),
-                        ),
-                      ],
-                    ),
-                  ),
+                  _buildSupportSection(context, themeColors),
 
                   // Danger Zone
-                  SliverToBoxAdapter(
-                    child: SettingsSection(
-                      title: 'DANGER ZONE',
-                      titleColor: Colors.red[400],
-                      themeColors: themeColors,
-                      children: [
-                        SettingsTile(
-                          icon: Icons.logout,
-                          title: 'Logout',
-                          subtitle: 'Sign out of your account',
-                          themeColors: themeColors,
-                          iconColor: Colors.orange,
-                          onTap: () async {
-                            await context.read<AuthProvider>().logout();
-                            if (context.mounted) context.go('/login');
-                          },
-                        ),
-                        SettingsDivider(themeColors: themeColors),
-                        SettingsTile(
-                          icon: Icons.delete_forever_outlined,
-                          title: 'Delete Account',
-                          subtitle: 'Permanently delete your account',
-                          themeColors: themeColors,
-                          iconColor: Colors.red,
-                          onTap: () => _showDeleteAccountDialog(context),
-                        ),
-                      ],
-                    ),
+                  _buildDangerZone(context, themeColors),
+
+                  // Footer spacing
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 32),
                   ),
                 ],
               ),
@@ -439,13 +191,405 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showSnack(BuildContext context, dynamic themeColors, String msg) {
+  Widget _buildGradientOrb({
+    double? top,
+    double? bottom,
+    double? left,
+    double? right,
+    required double size,
+    required List<Color> colors,
+  }) {
+    return Positioned(
+      top: top,
+      bottom: bottom,
+      left: left,
+      right: right,
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(colors: colors),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppBar(BuildContext context, dynamic themeColors, bool isWeb) {
+    return SliverAppBar(
+      expandedHeight: isWeb ? 160 : 140,
+      floating: false,
+      pinned: true,
+      backgroundColor: themeColors.background.withValues(alpha: 0.95),
+      surfaceTintColor: Colors.transparent,
+      foregroundColor: Colors.transparent,
+      elevation: 0,
+      leading: Padding(
+        padding: const EdgeInsets.only(left: 4.0),
+        child: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new, color: Colors.grey[400], size: 20),
+          onPressed: () => context.go('/home'),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        titlePadding: EdgeInsets.only(left: isWeb ? 72 : 60, bottom: 16),
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCollapsed = constraints.maxHeight <= 100;
+            return AnimatedOpacity(
+              opacity: isCollapsed ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 200),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [themeColors.primary, themeColors.secondary],
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.settings, size: 16, color: Colors.white),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Settings',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+        background: Align(
+          alignment: Alignment.bottomLeft,
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(isWeb ? 32 : 24, 0, 24, 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [themeColors.primary, themeColors.secondary],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: themeColors.primary.withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.settings_outlined,
+                        size: 28,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Settings',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Manage your account and preferences',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[400],
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, dynamic themeColors) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(32, 8, 32, 16),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildQuickActionCard(
+                icon: Icons.palette_outlined,
+                label: 'Theme',
+                color: themeColors.primary,
+                onTap: () => _showThemePickerDialog(context),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildQuickActionCard(
+                icon: Icons.notifications_outlined,
+                label: 'Notifications',
+                color: themeColors.secondary,
+                onTap: () => _showSnackBar(
+                  context,
+                  'Notifications not implemented',
+                  themeColors,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildQuickActionCard(
+                icon: Icons.lock_outline,
+                label: 'Security',
+                color: themeColors.tertiary,
+                onTap: () => _showSnackBar(
+                  context,
+                  'Security not implemented',
+                  themeColors,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActionCard({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                color.withValues(alpha: 0.15),
+                color.withValues(alpha: 0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: color.withValues(alpha: 0.3),
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28),
+              const SizedBox(height: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[300],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccountSection(BuildContext context, dynamic themeColors) {
+    return SliverToBoxAdapter(
+      child: SettingsSection(
+        title: 'ACCOUNT',
+        themeColors: themeColors,
+        children: [
+          SettingsTile(
+            icon: Icons.person_outline,
+            title: 'Edit Profile',
+            subtitle: 'Update your personal information',
+            themeColors: themeColors,
+            onTap: () => _showEditProfileDialog(context),
+          ),
+          SettingsDivider(themeColors: themeColors),
+          SettingsTile(
+            icon: Icons.lock_outline,
+            title: 'Change Password',
+            subtitle: 'Update your password',
+            themeColors: themeColors,
+            onTap: () => _showChangePasswordDialog(context),
+          ),
+          SettingsDivider(themeColors: themeColors),
+          SettingsTile(
+            icon: Icons.email_outlined,
+            title: 'Email Preferences',
+            subtitle: 'Manage email notifications',
+            themeColors: themeColors,
+            onTap: () => _showSnackBar(
+              context,
+              'Email preferences not implemented',
+              themeColors,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferencesSection(BuildContext context, dynamic themeColors) {
+    return SliverToBoxAdapter(
+      child: SettingsSection(
+        title: 'PREFERENCES',
+        themeColors: themeColors,
+        children: [
+          SettingsTile(
+            icon: Icons.notifications_outlined,
+            title: 'Notifications',
+            subtitle: 'Manage app notifications',
+            themeColors: themeColors,
+            onTap: () => _showSnackBar(
+              context,
+              'Notifications not implemented',
+              themeColors,
+            ),
+          ),
+          SettingsDivider(themeColors: themeColors),
+          SettingsTile(
+            icon: Icons.palette_outlined,
+            title: 'Appearance',
+            subtitle: 'Current: ${context.watch<ThemeProvider>().themeName}',
+            themeColors: themeColors,
+            onTap: () => _showThemePickerDialog(context),
+          ),
+          SettingsDivider(themeColors: themeColors),
+          SettingsTile(
+            icon: Icons.language_outlined,
+            title: 'Language',
+            subtitle: 'English (US)',
+            themeColors: themeColors,
+            onTap: () => _showSnackBar(
+              context,
+              'Language selection not implemented',
+              themeColors,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupportSection(BuildContext context, dynamic themeColors) {
+    return SliverToBoxAdapter(
+      child: SettingsSection(
+        title: 'SUPPORT',
+        themeColors: themeColors,
+        children: [
+          SettingsTile(
+            icon: Icons.help_outline,
+            title: 'Help Center',
+            subtitle: 'Get help and support',
+            themeColors: themeColors,
+            onTap: () => _showSnackBar(
+              context,
+              'Help Center not implemented',
+              themeColors,
+            ),
+          ),
+          SettingsDivider(themeColors: themeColors),
+          SettingsTile(
+            icon: Icons.privacy_tip_outlined,
+            title: 'Privacy Policy',
+            subtitle: 'View our privacy policy',
+            themeColors: themeColors,
+            onTap: () => _showSnackBar(
+              context,
+              'Privacy Policy not implemented',
+              themeColors,
+            ),
+          ),
+          SettingsDivider(themeColors: themeColors),
+          SettingsTile(
+            icon: Icons.description_outlined,
+            title: 'Terms of Service',
+            subtitle: 'View our terms of service',
+            themeColors: themeColors,
+            onTap: () => _showSnackBar(
+              context,
+              'Terms of Service not implemented',
+              themeColors,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDangerZone(BuildContext context, dynamic themeColors) {
+    return SliverToBoxAdapter(
+      child: SettingsSection(
+        title: 'DANGER ZONE',
+        titleColor: Colors.red[400],
+        themeColors: themeColors,
+        children: [
+          SettingsTile(
+            icon: Icons.logout,
+            title: 'Logout',
+            subtitle: 'Sign out of your account',
+            themeColors: themeColors,
+            iconColor: Colors.orange,
+            onTap: () async {
+              await context.read<AuthProvider>().logout();
+              if (context.mounted) context.go('/login');
+            },
+          ),
+          SettingsDivider(themeColors: themeColors),
+          SettingsTile(
+            icon: Icons.delete_forever_outlined,
+            title: 'Delete Account',
+            subtitle: 'Permanently delete your account',
+            themeColors: themeColors,
+            iconColor: Colors.red,
+            onTap: () => _showDeleteAccountDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSnackBar(BuildContext context, String message, dynamic themeColors) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg),
+        content: Text(message),
         backgroundColor: themeColors.primary,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }

@@ -17,7 +17,7 @@ class AppConfig {
     if (_initialized) {
       throw StateError('AppConfig has already been initialized');
     }
-    
+
     AppConfig.apiBaseUrl = apiBaseUrl;
     AppConfig.userPoolId = userPoolId;
     AppConfig.region = region;
@@ -35,6 +35,8 @@ class AppConfig {
   static String get authResendCodeUrl => '$apiBaseUrl/auth/resend-code';
   static String get authMeUrl => '$apiBaseUrl/auth/me';
   static String get subscriptionsUrl => '$apiBaseUrl/subscriptions';
+  static String get authUpdateProfileUrl => '$apiBaseUrl/auth/profile';
+  static String get authChangePasswordUrl => '$apiBaseUrl/auth/change-password';
 
   // Helper method to get subscription by ID
   static String subscriptionByIdUrl(String id) => '$subscriptionsUrl/$id';
@@ -44,19 +46,19 @@ class AppConfig {
 enum LogLevel {
   /// Detailed debug information
   debug(0),
-  
+
   /// Informational messages
   info(1),
-  
+
   /// Warning messages
   warning(2),
-  
+
   /// Error messages
   error(3),
-  
+
   /// Critical failures
   critical(4),
-  
+
   /// Disable all logging
   none(99);
 
