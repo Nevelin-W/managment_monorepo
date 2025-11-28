@@ -275,21 +275,6 @@ class AuthService {
     }
   }
 
-  Future<void> logout() async {
-    _log.info('User logout initiated');
-    try {
-      await _deleteToken('auth_token');
-      await _deleteToken('access_token');
-      await _deleteToken('refresh_token');
-      _log.info('Logout completed - all tokens cleared');
-    } catch (e, stackTrace) {
-      _log.error('Logout error', error: e, stackTrace: stackTrace);
-      rethrow;
-    }
-  }
-
-  // Add this method to your existing AuthService class
-
   /// Update user profile information
   Future<bool> updateProfile({String? name}) async {
     _log.info('Profile update attempt');
@@ -347,55 +332,75 @@ class AuthService {
     }
   }
   Future<bool> changePassword({
-    required String oldPassword,
-    required String newPassword,
-  }) async {
-    _log.info('Password change attempt');
-    
-    try {
-      final token = await _readToken('auth_token');
-      if (token == null) {
-        _log.warning('No auth token found for password change');
-        throw Exception('Not authenticated');
-      }
+  required String oldPassword,
+  required String newPassword,
+}) async {
+  _log.info('Password change attempt');
+  
+  try {
+    final idToken = await _readToken('auth_token');
+    if (idToken == null) {
+      _log.warning('No auth token found for password change');
+      throw Exception('Not authenticated');
+    }
 
-      final requestBody = jsonEncode({
-        'oldPassword': oldPassword,
-        'newPassword': newPassword,
-      });
+    final accessToken = await _readToken('access_token');
+    if (accessToken == null) {
+      _log.warning('No access token found for password change');
+      throw Exception('Not authenticated - missing access token');
+    }
 
-      _log.debug('Sending password change request', {
-        'oldPassword': LogSanitizer.password(),
-        'newPassword': LogSanitizer.password(),
-      });
+    final requestBody = jsonEncode({
+      'oldPassword': oldPassword,
+      'newPassword': newPassword,
+      'accessToken': accessToken,  // ← Send in body
+    });
 
-      final response = await http.post(
-        Uri.parse(AppConfig.authChangePasswordUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: requestBody,
-      );
+    _log.debug('Sending password change request', {
+      'oldPassword': LogSanitizer.password(),
+      'newPassword': LogSanitizer.password(),
+    });
 
-      _log.debug('Password change response received', {
+    final response = await http.post(
+      Uri.parse(AppConfig.authChangePasswordUrl),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $idToken',  // ← ID token for API Gateway
+      },
+      body: requestBody,
+    );
+
+    _log.debug('Password change response received', {
+      'statusCode': response.statusCode,
+    });
+
+    if (response.statusCode == 200) {
+      _log.info('Password changed successfully');
+      return true;
+    } else {
+      final error = jsonDecode(response.body);
+      final errorMsg = error['error'] ?? 'Password change failed';
+      _log.warning('Password change failed', {
+        'error': errorMsg,
         'statusCode': response.statusCode,
       });
+      throw Exception(errorMsg);
+    }
+  } catch (e, stackTrace) {
+    _log.error('Password change error', error: e, stackTrace: stackTrace);
+    rethrow;
+  }
+}
 
-      if (response.statusCode == 200) {
-        _log.info('Password changed successfully');
-        return true;
-      } else {
-        final error = jsonDecode(response.body);
-        final errorMsg = error['error'] ?? 'Password change failed';
-        _log.warning('Password change failed', {
-          'error': errorMsg,
-          'statusCode': response.statusCode,
-        });
-        throw Exception(errorMsg);
-      }
+  Future<void> logout() async {
+    _log.info('User logout initiated');
+    try {
+      await _deleteToken('auth_token');
+      await _deleteToken('access_token');
+      await _deleteToken('refresh_token');
+      _log.info('Logout completed - all tokens cleared');
     } catch (e, stackTrace) {
-      _log.error('Password change error', error: e, stackTrace: stackTrace);
+      _log.error('Logout error', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }

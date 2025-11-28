@@ -96,22 +96,42 @@ exports.handler = async (event) => {
       };
     }
 
-    // Extract access token from Authorization header
-    // The authorizer passes the token through
-    const authHeader = event.headers?.Authorization || event.headers?.authorization;
-    if (!authHeader) {
+    // Extract access token from custom header or Authorization header
+    let accessToken;
+
+    // First try custom header (X-Access-Token)
+    const customHeader = event.headers?.['X-Access-Token'] || event.headers?.['x-access-token'];
+    if (customHeader) {
+      console.log('Using access token from X-Access-Token header');
+      accessToken = customHeader;
+    } else {
+      // Fallback to Authorization header
+      console.log('No X-Access-Token header found, using Authorization header');
+      const authHeader = event.headers?.Authorization || event.headers?.authorization;
+      if (!authHeader) {
+        return {
+          statusCode: 401,
+          headers: {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+          },
+          body: JSON.stringify({ error: 'Missing authorization token' }),
+        };
+      }
+      // Remove 'Bearer ' prefix if present
+      accessToken = authHeader.replace(/^Bearer\s+/i, '');
+    }
+
+    if (!accessToken) {
       return {
         statusCode: 401,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
-        body: JSON.stringify({ error: 'Missing authorization token' }),
+        body: JSON.stringify({ error: 'Access token is required' }),
       };
     }
-
-    // Remove 'Bearer ' prefix if present
-    const accessToken = authHeader.replace(/^Bearer\s+/i, '');
 
     console.log('Attempting password change for user:', email);
 
@@ -130,19 +150,28 @@ exports.handler = async (event) => {
       
       // Handle specific Cognito errors
       let errorMessage = 'Failed to change password';
+      let statusCode = 400;
       
       if (cognitoError.name === 'NotAuthorizedException') {
         errorMessage = 'Current password is incorrect';
+        statusCode = 401;
       } else if (cognitoError.name === 'InvalidPasswordException') {
         errorMessage = 'New password does not meet requirements';
       } else if (cognitoError.name === 'LimitExceededException') {
         errorMessage = 'Too many attempts. Please try again later';
+        statusCode = 429;
       } else if (cognitoError.name === 'InvalidParameterException') {
         errorMessage = 'Invalid password format';
+      } else if (cognitoError.name === 'UserNotFoundException') {
+        errorMessage = 'User not found';
+        statusCode = 404;
+      } else if (cognitoError.name === 'PasswordResetRequiredException') {
+        errorMessage = 'Password reset is required';
+        statusCode = 403;
       }
       
       return {
-        statusCode: 400,
+        statusCode: statusCode,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
