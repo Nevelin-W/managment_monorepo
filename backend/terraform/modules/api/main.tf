@@ -312,7 +312,7 @@ resource "aws_api_gateway_integration" "subs_update" {
 }
 
 resource "aws_api_gateway_method" "subs_delete_delete" {
-  rest_api_id = aws_api_gateway_rest_api.main.id
+  rest_api_id   = aws_api_gateway_rest_api.main.id
   resource_id   = aws_api_gateway_resource.subscription_id.id
   http_method   = "DELETE"
   authorization = "COGNITO_USER_POOLS"
@@ -331,17 +331,17 @@ resource "aws_api_gateway_integration" "subs_delete" {
 # Lambda Permissions
 resource "aws_lambda_permission" "api_gateway" {
   for_each = {
-    auth_login          = { function_name = var.lambda_auth_login_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    auth_signup         = { function_name = var.lambda_auth_signup_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    auth_me             = { function_name = var.lambda_auth_me_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    auth_profile        = { function_name = var.lambda_auth_update_profile_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    auth_confirm        = { function_name = var.lambda_auth_confirm_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_login           = { function_name = var.lambda_auth_login_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_signup          = { function_name = var.lambda_auth_signup_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_me              = { function_name = var.lambda_auth_me_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_profile         = { function_name = var.lambda_auth_update_profile_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_confirm         = { function_name = var.lambda_auth_confirm_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
     auth_change_password = { function_name = var.lambda_auth_change_password_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    auth_resend_code    = { function_name = var.lambda_auth_resend_code_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_list           = { function_name = var.lambda_subs_list_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_create         = { function_name = var.lambda_subs_create_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_update         = { function_name = var.lambda_subs_update_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
-    subs_delete         = { function_name = var.lambda_subs_delete_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    auth_resend_code     = { function_name = var.lambda_auth_resend_code_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_list            = { function_name = var.lambda_subs_list_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_create          = { function_name = var.lambda_subs_create_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_update          = { function_name = var.lambda_subs_update_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
+    subs_delete          = { function_name = var.lambda_subs_delete_name, source_arn = "${aws_api_gateway_rest_api.main.execution_arn}/*/*" }
   }
 
   statement_id  = "AllowAPIGatewayInvoke-${each.key}"
@@ -353,10 +353,10 @@ resource "aws_lambda_permission" "api_gateway" {
 
 resource "aws_api_gateway_deployment" "main" {
   rest_api_id = aws_api_gateway_rest_api.main.id
-
   triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.auth.id,
+    redeployment = sha1(jsonencode({
+      resources = [
+        aws_api_gateway_resource.auth.id,
       aws_api_gateway_resource.subscriptions.id,
       aws_api_gateway_method.auth_login_post.id,
       aws_api_gateway_method.auth_signup_post.id,
@@ -375,7 +375,7 @@ resource "aws_api_gateway_deployment" "main" {
       aws_api_gateway_integration.auth_profile.id,
       aws_api_gateway_integration.auth_confirm.id,
       aws_api_gateway_integration.auth_resend_code.id,
-      aws_api_gateway_integration.auth_change_password.id, 
+      aws_api_gateway_integration.auth_change_password.id,
       aws_api_gateway_integration.subs_list.id,
       aws_api_gateway_integration.subs_create.id,
       aws_api_gateway_integration.subs_update.id,
@@ -389,8 +389,13 @@ resource "aws_api_gateway_deployment" "main" {
       module.auth_change_password_cors,
       module.subscriptions_cors,
       module.subscription_id_cors,
-    ]))
+      ]
+      lambda_hashes = {
+        update_profile = var.auth_confirm_source_code_hash
+      }
+    }))
   }
+  
 
   lifecycle {
     create_before_destroy = true

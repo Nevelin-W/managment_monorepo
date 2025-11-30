@@ -182,9 +182,9 @@ class _ThemePickerDialogState extends State<ThemePickerDialog> {
   Widget _buildThemeGrid(bool isWeb) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final crossAxisCount = isWeb ? 3 : 2;
+        final crossAxisCount = isWeb ? 3 : 1;
         final spacing = isWeb ? 16.0 : 12.0;
-        final childAspectRatio = isWeb ? 1.2 : 1.1;
+        final childAspectRatio = isWeb ? 1.2 : 2.5;
 
         return GridView.builder(
           shrinkWrap: true,
@@ -198,14 +198,14 @@ class _ThemePickerDialogState extends State<ThemePickerDialog> {
           itemCount: AppThemeType.values.length,
           itemBuilder: (context, index) {
             final theme = AppThemeType.values[index];
-            return _buildThemeCard(theme);
+            return _buildThemeCard(theme, isWeb);
           },
         );
       },
     );
   }
 
-  Widget _buildThemeCard(AppThemeType theme) {
+  Widget _buildThemeCard(AppThemeType theme, bool isWeb) {
     final colors = _getThemeColors(theme);
     final isSelected = _selectedTheme == theme;
     final themeName = _getThemeName(theme);
@@ -244,39 +244,41 @@ class _ThemePickerDialogState extends State<ThemePickerDialog> {
           children: [
             // Color Preview Circles
             Positioned(
-              top: 16,
+              top: isWeb ? 16 : 20,
               left: 16,
               right: 16,
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _buildColorCircle(colors.primary, 32),
-                  const SizedBox(width: 8),
-                  _buildColorCircle(colors.secondary, 28),
-                  const SizedBox(width: 8),
-                  _buildColorCircle(colors.tertiary, 24),
+                  _buildColorCircle(colors.primary, isWeb ? 22 : 28),
+                  SizedBox(width: isWeb ? 4 : 6),
+                  _buildColorCircle(colors.secondary, isWeb ? 18 : 24),
+                  SizedBox(width: isWeb ? 4 : 6),
+                  _buildColorCircle(colors.tertiary, isWeb ? 14 : 20),
                 ],
               ),
             ),
-
             // Theme Name
             Positioned(
-              bottom: 16,
+              bottom: isWeb ? 16 : 20,
               left: 12,
               right: 12,
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     themeName,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: isWeb ? 15 : 14,
                       fontWeight: FontWeight.bold,
                       color: isSelected ? Colors.white : Colors.grey[300],
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  if (isSelected)
+                  // Only show SELECTED badge on web
+                  if (isWeb && isSelected) ...[
+                    const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,
@@ -299,17 +301,18 @@ class _ThemePickerDialogState extends State<ThemePickerDialog> {
                         ),
                       ),
                     ),
+                  ],
                 ],
               ),
             ),
 
-            // Checkmark
+            // Checkmark (more prominent on mobile)
             if (isSelected)
               Positioned(
                 top: 8,
                 right: 8,
                 child: Container(
-                  padding: const EdgeInsets.all(4),
+                  padding: EdgeInsets.all(isWeb ? 4 : 6),
                   decoration: BoxDecoration(
                     color: colors.primary,
                     shape: BoxShape.circle,
@@ -320,10 +323,10 @@ class _ThemePickerDialogState extends State<ThemePickerDialog> {
                       ),
                     ],
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.check,
                     color: Colors.white,
-                    size: 16,
+                    size: isWeb ? 16 : 20,
                   ),
                 ),
               ),

@@ -22,6 +22,10 @@ output "auth_confirm_name" {
   value = aws_lambda_function.auth_confirm.function_name
 }
 
+output "auth_confirm_source_code_hash" {
+  value = aws_lambda_function.auth_confirm.source_code_hash
+}
+
 output "auth_confirm_invoke_arn" {
   value = aws_lambda_function.auth_confirm.invoke_arn
   

@@ -87,6 +87,7 @@ module "api" {
   lambda_auth_update_profile_name  = module.lambda.auth_update_profile_function.function_name
   lambda_auth_change_password_invoke_arn = module.lambda.auth_change_password_function.invoke_arn
   lambda_auth_change_password_name       = module.lambda.auth_change_password_function.function_name
+  auth_confirm_source_code_hash          = module.lambda.auth_confirm_source_code_hash
 }
 
 # Email Processing Module

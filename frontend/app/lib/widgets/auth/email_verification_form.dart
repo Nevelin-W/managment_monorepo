@@ -39,7 +39,6 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
   @override
   void initState() {
     super.initState();
-    // Auto-focus first box when widget loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNodes[0].requestFocus();
     });
@@ -67,104 +66,97 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
     _focusNodes[0].requestFocus();
   }
 
-  Future<void> _verifyCode() async {
-    final code = _getCode();
-    
-    if (code.length != 6) {
-      setState(() => _errorMessage = 'Please enter all 6 digits');
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-      _successMessage = null;
-    });
-
-    try {
-      await _authService.confirmEmail(widget.email, code);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Email verified successfully!'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      context.go('/login');
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _errorMessage = 'Verification failed. Please check the code and try again.';
-        _isLoading = false;
-      });
-      _clearCode();
-    }
+Future<void> _verifyCode() async {
+  final code = _getCode();
+  
+  if (code.length != 6) {
+    setState(() => _errorMessage = 'Please enter all 6 digits');
+    return;
   }
 
-  Future<void> _resendCode() async {
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+    _successMessage = null;
+  });
+
+  try {
+    // Explicitly await and assign to ensure proper Future completion
+    await _authService.confirmEmail(widget.email, code).then((_) {});
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Email verified successfully!'),
+        backgroundColor: widget.themeColors.primary,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+
+    context.go('/login');
+  } catch (e) {
+    if (!mounted) return;
+
     setState(() {
-      _isResending = true;
-      _errorMessage = null;
-      _successMessage = null;
+      _errorMessage = e.toString().contains('Exception: ')
+          ? e.toString().replaceAll('Exception: ', '')
+          : e.toString();
+      _isLoading = false;
     });
-
-    try {
-      await _authService.resendCode(widget.email);
-
-      if (!mounted) return;
-
-      setState(() {
-        _successMessage = 'Verification code resent! Check your email.';
-        _isResending = false;
-      });
-      _clearCode();
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-        _isResending = false;
-      });
-    }
+    _clearCode();
   }
+}
+
+Future<void> _resendCode() async {
+  setState(() {
+    _isResending = true;
+    _errorMessage = null;
+    _successMessage = null;
+  });
+
+  try {
+    await _authService.resendCode(widget.email).then((_) {});
+
+    if (!mounted) return;
+
+    setState(() {
+      _successMessage = 'Verification code resent! Check your email.';
+      _isResending = false;
+    });
+    _clearCode();
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isResending = false;
+    });
+  }
+}
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: widget.themeColors.surface.withValues(alpha: 0.5),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            widget.themeColors.surface.withValues(alpha: 0.6),
+            widget.themeColors.background.withValues(alpha: 0.8),
+          ],
+        ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
+          color: widget.themeColors.primary.withValues(alpha: 0.2),
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                widget.themeColors.surface.withValues(alpha: 0.8),
-                widget.themeColors.background.withValues(alpha: 0.9),
-              ],
-            ),
-          ),
           padding: const EdgeInsets.all(32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -216,7 +208,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
         Text(
           'Enter the 6-digit code sent to',
           style: TextStyle(
-            color: Colors.grey[400],
+            color: widget.themeColors.primary.withValues(alpha: 0.7),
             fontSize: 14,
           ),
           textAlign: TextAlign.center,
@@ -233,12 +225,13 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
         ),
         const SizedBox(height: 24),
         Container(
-          height: 1,
+          height: 2,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 Colors.transparent,
-                widget.themeColors.primary.withValues(alpha: 0.3),
+                widget.themeColors.primary.withValues(alpha: 0.5),
+                widget.themeColors.secondary.withValues(alpha: 0.3),
                 Colors.transparent,
               ],
             ),
@@ -253,7 +246,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: List.generate(6, (index) {
         return Padding(
-          padding: EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 4),
           child: _buildDigitBox(index),
         );
       }),
@@ -277,7 +270,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
         ),
         inputFormatters: [
           FilteringTextInputFormatter.digitsOnly,
-          LengthLimitingTextInputFormatter(6), // Allow paste of full code
+          LengthLimitingTextInputFormatter(6),
         ],
         decoration: InputDecoration(
           counterText: '',
@@ -286,13 +279,13 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: widget.themeColors.primary.withValues(alpha: 0.2),
             ),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: widget.themeColors.primary.withValues(alpha: 0.2),
             ),
           ),
           focusedBorder: OutlineInputBorder(
@@ -306,25 +299,21 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
         ),
         onChanged: (value) {
           if (value.length > 1) {
-            // Handle paste - distribute digits across all boxes
             final pastedText = value;
             _handlePaste(pastedText, index);
             return;
           }
           
           if (value.isNotEmpty) {
-            // Move to next field
             if (index < 5) {
               _focusNodes[index + 1].requestFocus();
             } else {
-              // Last field filled, unfocus and auto-verify
               _focusNodes[index].unfocus();
               _verifyCode();
             }
           }
         },
         onTap: () {
-          // Only allow tapping if previous fields are filled
           for (int i = 0; i < index; i++) {
             if (_controllers[i].text.isEmpty) {
               _focusNodes[i].requestFocus();
@@ -337,20 +326,16 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
   }
 
   void _handlePaste(String pastedText, int startIndex) {
-    // Extract only digits from pasted text
     final digits = pastedText.replaceAll(RegExp(r'\D'), '');
     
-    // Fill boxes starting from the current index
     for (int i = 0; i < digits.length && (startIndex + i) < 6; i++) {
       _controllers[startIndex + i].text = digits[i];
     }
     
-    // Focus the next empty box or the last box if all filled
     final nextEmptyIndex = _controllers.indexWhere((c) => c.text.isEmpty);
     if (nextEmptyIndex != -1) {
       _focusNodes[nextEmptyIndex].requestFocus();
     } else {
-      // All boxes filled
       _focusNodes[5].unfocus();
       _verifyCode();
     }
@@ -361,9 +346,11 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
       onPressed: _isLoading ? null : _verifyCode,
       isLoading: _isLoading,
       gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
         colors: [
-          widget.themeColors.secondary,
           widget.themeColors.primary,
+          widget.themeColors.secondary,
           widget.themeColors.tertiary,
         ],
       ),
@@ -383,7 +370,14 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            widget.themeColors.primary.withValues(alpha: 0.1),
+            widget.themeColors.secondary.withValues(alpha: 0.05),
+          ],
+        ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: widget.themeColors.primary.withValues(alpha: 0.2),
@@ -395,7 +389,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
           Text(
             "Didn't receive a code? ",
             style: TextStyle(
-              color: Colors.grey[400],
+              color: widget.themeColors.primary.withValues(alpha: 0.7),
               fontSize: 14,
             ),
           ),
@@ -419,6 +413,8 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
                   color: widget.themeColors.primary,
                   fontWeight: FontWeight.bold,
                   fontSize: 14,
+                  decoration: TextDecoration.underline,
+                  decorationColor: widget.themeColors.primary,
                 ),
               ),
             ),

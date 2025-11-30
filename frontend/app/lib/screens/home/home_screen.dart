@@ -661,8 +661,107 @@ class _FilterChips extends StatelessWidget {
     required this.themeColors,
   });
 
+  String _getFilterLabel(SubscriptionFilter filter) {
+    switch (filter) {
+      case SubscriptionFilter.upcoming:
+        return 'Upcoming';
+      case SubscriptionFilter.mostExpensive:
+        return 'Most Expensive';
+      case SubscriptionFilter.recent:
+        return 'Recent';
+    }
+  }
+
+  IconData _getFilterIcon(SubscriptionFilter filter) {
+    switch (filter) {
+      case SubscriptionFilter.upcoming:
+        return Icons.schedule;
+      case SubscriptionFilter.mostExpensive:
+        return Icons.trending_up;
+      case SubscriptionFilter.recent:
+        return Icons.access_time;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
+
+    if (isMobile) {
+      // Mobile: Use dropdown
+      return PopupMenuButton<SubscriptionFilter>(
+        initialValue: selectedFilter,
+        onSelected: onFilterChanged,
+        offset: const Offset(0, 50),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        color: themeColors.surface,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                themeColors.primary.withValues(alpha: 0.3),
+                themeColors.secondary.withValues(alpha: 0.2),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: themeColors.primary.withValues(alpha: 0.5),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _getFilterIcon(selectedFilter),
+                size: 18,
+                color: themeColors.primary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                _getFilterLabel(selectedFilter),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_drop_down,
+                size: 20,
+                color: themeColors.primary,
+              ),
+            ],
+          ),
+        ),
+        itemBuilder: (context) => [
+          _buildMenuItem(
+            SubscriptionFilter.upcoming,
+            'Upcoming',
+            Icons.schedule,
+          ),
+          _buildMenuItem(
+            SubscriptionFilter.mostExpensive,
+            'Most Expensive',
+            Icons.trending_up,
+          ),
+          _buildMenuItem(
+            SubscriptionFilter.recent,
+            'Recent',
+            Icons.access_time,
+          ),
+        ],
+      );
+    }
+
+    // Web/Tablet: Use chips
     return Row(
       children: [
         _FilterChip(
@@ -689,6 +788,42 @@ class _FilterChips extends StatelessWidget {
           themeColors: themeColors,
         ),
       ],
+    );
+  }
+
+  PopupMenuItem<SubscriptionFilter> _buildMenuItem(
+    SubscriptionFilter filter,
+    String label,
+    IconData icon,
+  ) {
+    final isSelected = selectedFilter == filter;
+    return PopupMenuItem<SubscriptionFilter>(
+      value: filter,
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isSelected ? themeColors.primary : Colors.grey[400],
+          ),
+          const SizedBox(width: 12),
+          Text(
+            label,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.grey[400],
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              fontSize: 14,
+            ),
+          ),
+          const Spacer(),
+          if (isSelected)
+            Icon(
+              Icons.check,
+              size: 18,
+              color: themeColors.primary,
+            ),
+        ],
+      ),
     );
   }
 }

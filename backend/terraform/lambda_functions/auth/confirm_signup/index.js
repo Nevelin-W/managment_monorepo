@@ -1,6 +1,11 @@
-const { CognitoIdentityProviderClient, ConfirmSignUpCommand } = require("@aws-sdk/client-cognito-identity-provider");
+const { 
+  CognitoIdentityProviderClient, 
+  ConfirmSignUpCommand, 
+  AdminUpdateUserAttributesCommand,
+  AdminGetUserCommand 
+} = require("@aws-sdk/client-cognito-identity-provider");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, UpdateCommand, QueryCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, UpdateCommand, GetCommand } = require("@aws-sdk/lib-dynamodb");
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION }));
@@ -23,45 +28,81 @@ exports.handler = async (event) => {
       };
     }
 
-    // Confirm user in Cognito
-    const confirmCommand = new ConfirmSignUpCommand({
-      ClientId: process.env.USER_POOL_CLIENT_ID,
+    // Check if user is already confirmed
+    let isAlreadyConfirmed = false;
+    try {
+      const getUserCommand = new AdminGetUserCommand({
+        UserPoolId: process.env.USER_POOL_ID,
+        Username: email,
+      });
+      const userResponse = await cognitoClient.send(getUserCommand);
+      isAlreadyConfirmed = userResponse.UserStatus === 'CONFIRMED';
+    } catch (error) {
+      console.log('User status check error:', error.name);
+    }
+
+    // Try to confirm the user (only if not already confirmed)
+    if (!isAlreadyConfirmed) {
+      try {
+        const confirmCommand = new ConfirmSignUpCommand({
+          ClientId: process.env.USER_POOL_CLIENT_ID,
+          Username: email,
+          ConfirmationCode: code,
+        });
+        await cognitoClient.send(confirmCommand);
+      } catch (confirmError) {
+        // If user is already confirmed, this is okay - we'll just set email_verified
+        if (confirmError.name !== 'NotAuthorizedException' && 
+            confirmError.name !== 'AliasExistsException') {
+          throw confirmError;
+        }
+        console.log('User already confirmed, proceeding to set email_verified');
+      }
+    }
+
+    // CRITICAL: Always set email_verified to true in Cognito
+    const updateAttributesCommand = new AdminUpdateUserAttributesCommand({
+      UserPoolId: process.env.USER_POOL_ID,
       Username: email,
-      ConfirmationCode: code,
+      UserAttributes: [
+        {
+          Name: 'email_verified',
+          Value: 'true',
+        },
+      ],
     });
 
-    await cognitoClient.send(confirmCommand);
+    await cognitoClient.send(updateAttributesCommand);
+    console.log('email_verified set to true in Cognito');
 
-    // Update user record in DynamoDB to mark email as verified
-    // First, find the user by email
-    const queryCommand = new QueryCommand({
+    // Get user from DynamoDB using email directly (no GSI needed since email is partition key)
+    const getCommand = new GetCommand({
       TableName: process.env.USERS_TABLE,
-      IndexName: 'email-index',
-      KeyConditionExpression: 'email = :email',
-      ExpressionAttributeValues: {
-        ':email': email,
-      },
+      Key: { email: email },
     });
 
-    const queryResult = await dynamoClient.send(queryCommand);
+    const getResult = await dynamoClient.send(getCommand);
     
-    if (!queryResult.Items || queryResult.Items.length === 0) {
+    if (!getResult.Item) {
+      console.warn('User not found in DynamoDB, but Cognito verification succeeded');
       return {
-        statusCode: 404,
+        statusCode: 200,
         headers: {
           'Content-Type': 'application/json',
           'Access-Control-Allow-Origin': '*',
         },
-        body: JSON.stringify({ error: 'User not found' }),
+        body: JSON.stringify({
+          message: 'Email verified successfully. You can now log in.',
+          email: email,
+          emailVerified: true,
+        }),
       };
     }
 
-    const user = queryResult.Items[0];
-
-    // Update the user's emailVerified status
+    // Update the user's emailVerified status in DynamoDB
     const updateCommand = new UpdateCommand({
       TableName: process.env.USERS_TABLE,
-      Key: { id: user.id },
+      Key: { email: email },  // Use email as partition key
       UpdateExpression: 'SET emailVerified = :verified, updatedAt = :updatedAt',
       ExpressionAttributeValues: {
         ':verified': true,
@@ -79,7 +120,7 @@ exports.handler = async (event) => {
         'Access-Control-Allow-Origin': '*',
       },
       body: JSON.stringify({
-        message: 'Email verified successfully',
+        message: 'Email verified successfully. You can now log in.',
         user: {
           id: updateResult.Attributes.id,
           email: updateResult.Attributes.email,
@@ -100,13 +141,13 @@ exports.handler = async (event) => {
       errorMessage = 'Invalid verification code';
     } else if (error.name === 'ExpiredCodeException') {
       statusCode = 400;
-      errorMessage = 'Verification code has expired';
-    } else if (error.name === 'NotAuthorizedException') {
-      statusCode = 400;
-      errorMessage = 'User is already confirmed';
+      errorMessage = 'Verification code has expired. Please request a new code.';
     } else if (error.name === 'UserNotFoundException') {
       statusCode = 404;
       errorMessage = 'User not found';
+    } else if (error.name === 'LimitExceededException') {
+      statusCode = 429;
+      errorMessage = 'Too many attempts. Please try again later.';
     }
     
     return {

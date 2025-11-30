@@ -72,6 +72,12 @@ variable "lambda_auth_confirm_invoke_arn" {
   type        = string
 }
 
+variable "auth_confirm_source_code_hash" {
+  description = "Auth confirm Lambda source code hash"
+  type        = string
+  
+}
+
 variable "lambda_auth_resend_code_name" {
   description = "Auth resend code Lambda function name"
   type        = string

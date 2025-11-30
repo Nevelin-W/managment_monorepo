@@ -15,41 +15,59 @@ class BrandHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // Icon container (custom per screen)
+        // Icon container with gradient
         Container(
-          width: 56,
-          height: 56,
+          width: 64,
+          height: 64,
           decoration: BoxDecoration(
-            color: themeColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                themeColors.primary.withValues(alpha: 0.2),
+                themeColors.secondary.withValues(alpha: 0.1),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: themeColors.primary.withValues(alpha: 0.3),
+              color: themeColors.primary.withValues(alpha: 0.4),
               width: 2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: themeColors.primary.withValues(alpha: 0.3),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
           ),
           child: Center(
             child: Icon(
               icon,
               color: themeColors.primary,
-              size: 28,
+              size: 32,
             ),
           ),
         ),
 
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
 
-        // Brand name
+        // Brand name - Bear (white) + Minimum (primary)
         Text.rich(
           TextSpan(
             style: const TextStyle(
-              fontSize: 32,
+              fontSize: 36,
               fontFamily: 'monospace',
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
               letterSpacing: -0.5,
             ),
             children: [
-              const TextSpan(text: 'Bear'),
+              const TextSpan(
+                text: 'Bear',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
               TextSpan(
                 text: 'Minimum',
                 style: TextStyle(
@@ -64,11 +82,11 @@ class BrandHeader extends StatelessWidget {
 
         const SizedBox(height: 8),
 
-        // Slogan
-        const Text(
+        // Slogan with primary color
+        Text(
           '> Just the essentials_',
           style: TextStyle(
-            color: Color(0xFF6B7280),
+            color: themeColors.primary.withValues(alpha: 0.7),
             fontSize: 11,
             fontFamily: 'monospace',
             letterSpacing: 1.5,

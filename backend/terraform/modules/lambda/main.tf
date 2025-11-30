@@ -169,6 +169,7 @@ resource "aws_lambda_function" "auth_me" {
 # Auth - Confirm Email Lambda
 resource "aws_lambda_function" "auth_confirm" {
   filename      = "${path.module}/../../lambda_functions/auth/confirm_signup/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/auth/confirm_signup/function.zip")
   function_name = "${var.project_name}-auth-confirm-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"

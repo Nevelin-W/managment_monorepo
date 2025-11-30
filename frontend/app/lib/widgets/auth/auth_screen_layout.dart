@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../common/grid_painter.dart';
 
-/// Reusable layout for all authentication screens
-/// Provides consistent background, glows, and structure
 class AuthScreenLayout extends StatelessWidget {
   final ThemeColors themeColors;
   final Widget header;
@@ -35,7 +33,6 @@ class AuthScreenLayout extends StatelessWidget {
       child: Stack(
         children: [
           _buildGridBackground(),
-          _buildGlowEffects(),
           _buildScrollableContent(),
         ],
       ),
@@ -56,53 +53,7 @@ class AuthScreenLayout extends StatelessWidget {
     );
   }
 
-  Widget _buildGlowEffects() {
-    return Stack(
-      children: [
-        _buildGlow(
-          top: -100,
-          right: -100,
-          color: themeColors.primary,
-          opacity: 0.15,
-        ),
-        _buildGlow(
-          bottom: -100,
-          left: -100,
-          color: themeColors.secondary,
-          opacity: 0.1,
-        ),
-      ],
-    );
-  }
 
-  Widget _buildGlow({
-    double? top,
-    double? bottom,
-    double? left,
-    double? right,
-    required Color color,
-    required double opacity,
-  }) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: Container(
-        width: 300,
-        height: 300,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [
-              color.withValues(alpha: opacity),
-              Colors.transparent,
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildScrollableContent() {
     return SafeArea(

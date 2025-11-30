@@ -5,7 +5,6 @@ import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../config/theme.dart';
 import '../utils/app_constants.dart';
-import '../widgets/common/bear_logo.dart';
 import '../widgets/common/grid_painter.dart';
 import '../widgets/common/orbital_loading_indicator.dart';
 
@@ -20,6 +19,7 @@ class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
   bool _navigated = false;
 
   static const _animationDuration = Duration(milliseconds: 1200);
@@ -41,6 +41,11 @@ class _SplashScreenState extends State<SplashScreen>
     _fadeAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOut,
+    );
+
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutBack,
     );
 
     _controller.forward();
@@ -78,6 +83,7 @@ class _SplashScreenState extends State<SplashScreen>
       body: _SplashBody(
         themeColors: themeColors,
         fadeAnimation: _fadeAnimation,
+        scaleAnimation: _scaleAnimation,
       ),
     );
   }
@@ -86,10 +92,12 @@ class _SplashScreenState extends State<SplashScreen>
 class _SplashBody extends StatelessWidget {
   final ThemeColors themeColors;
   final Animation<double> fadeAnimation;
+  final Animation<double> scaleAnimation;
 
   const _SplashBody({
     required this.themeColors,
     required this.fadeAnimation,
+    required this.scaleAnimation,
   });
 
   @override
@@ -137,18 +145,25 @@ class _SplashBody extends StatelessWidget {
     return Stack(
       children: [
         _buildGlow(
-          top: size.height * 0.2,
-          left: size.width * 0.15,
-          size: AppGridConstants.glowSize,
+          top: size.height * 0.15,
+          left: size.width * 0.1,
+          size: AppGridConstants.glowSize * 1.2,
           color: themeColors.primary,
           opacity: AppOpacity.light,
+        ),
+        _buildGlow(
+          top: size.height * 0.25,
+          right: size.width * 0.2,
+          size: AppGridConstants.glowSize * 0.8,
+          color: themeColors.secondary,
+          opacity: 0.15,
         ),
         _buildGlow(
           bottom: size.height * 0.2,
           right: size.width * 0.15,
           size: AppGridConstants.glowSize,
           color: themeColors.tertiary,
-          opacity: 0.15,
+          opacity: 0.12,
         ),
       ],
     );
@@ -191,8 +206,6 @@ class _SplashBody extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildBearLogo(),
-            SizedBox(height: AppSpacing.xxxl + AppSpacing.lg),
             _buildBrandName(),
             SizedBox(height: AppSpacing.lg),
             _buildTagline(),
@@ -204,86 +217,57 @@ class _SplashBody extends StatelessWidget {
     );
   }
 
-  Widget _buildBearLogo() {
-    return Container(
-      width: 160,
-      height: 160,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            themeColors.primary.withValues(alpha: AppOpacity.light),
-            themeColors.tertiary.withValues(alpha: 0.15),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppBorderRadius.cardLarge * 2),
-        border: Border.all(
-          color: themeColors.primary.withValues(
-            alpha: AppOpacity.medium + AppOpacity.subtle,
-          ),
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: themeColors.primary.withValues(
-              alpha: AppOpacity.medium + AppOpacity.subtle,
-            ),
-            blurRadius: 40,
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: const Center(
-        child: BearLogo(
-          width: 120,
-          height: 120,
-        ),
-      ),
-    );
-  }
-
   Widget _buildBrandName() {
-    return ShaderMask(
-      shaderCallback: (bounds) => LinearGradient(
-        colors: [
-          Colors.white,
-          themeColors.primary,
-          Colors.white,
-        ],
-        stops: const [0.0, 0.5, 1.0],
-      ).createShader(bounds),
-      child: Text.rich(
-        TextSpan(
-          style: TextStyle(
-            fontSize: AppFontSize.xxxl + AppBorderRadius.xl,
-            fontFamily: 'monospace',
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: -1,
-          ),
-          children: const [
-            TextSpan(text: 'Bear'),
-            TextSpan(
-              text: 'Minimum',
-              style: TextStyle(fontWeight: FontWeight.w300),
-            ),
-          ],
+    return Text.rich(
+      TextSpan(
+        style: TextStyle(
+          fontSize: AppFontSize.xxxl + AppBorderRadius.xl,
+          fontFamily: 'monospace',
+          letterSpacing: -1,
         ),
-        textAlign: TextAlign.center,
+        children: [
+          TextSpan(
+            text: 'Bear',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          TextSpan(
+            text: 'Minimum',
+            style: TextStyle(
+              fontWeight: FontWeight.w300,
+              color: themeColors.primary,
+            ),
+          ),
+        ],
       ),
+      textAlign: TextAlign.center,
     );
   }
 
   Widget _buildTagline() {
-    return Text(
-      '> Just the essentials_',
-      style: TextStyle(
-        color: themeColors.primary,
-        fontSize: AppFontSize.caption,
-        fontFamily: 'monospace',
-        letterSpacing: 2,
-        fontWeight: FontWeight.w500,
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.xs,
+      ),
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: themeColors.primary.withValues(alpha: 0.3),
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(AppBorderRadius.chip),
+      ),
+      child: Text(
+        '> Just the essentials_',
+        style: TextStyle(
+          color: themeColors.primary,
+          fontSize: AppFontSize.caption,
+          fontFamily: 'monospace',
+          letterSpacing: 2,
+          fontWeight: FontWeight.w500,
+        ),
       ),
     );
   }

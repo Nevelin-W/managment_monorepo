@@ -33,7 +33,6 @@ class _LoginFormState extends State<LoginForm> {
   }
 
   Future<void> _handleLogin() async {
-    // Enable auto-validation after first submit attempt
     setState(() => _autoValidate = true);
     
     if (!_formKey.currentState!.validate()) return;
@@ -57,7 +56,7 @@ class _LoginFormState extends State<LoginForm> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(error ?? 'Login failed'),
-        backgroundColor: Colors.red,
+        backgroundColor: widget.themeColors.tertiary,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
       ),
@@ -68,33 +67,23 @@ class _LoginFormState extends State<LoginForm> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: widget.themeColors.surface.withValues(alpha: 0.5),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            widget.themeColors.surface.withValues(alpha: 0.6),
+            widget.themeColors.background.withValues(alpha: 0.8),
+          ],
+        ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
+          color: widget.themeColors.primary.withValues(alpha: 0.2),
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                widget.themeColors.surface.withValues(alpha: 0.8),
-                widget.themeColors.background.withValues(alpha: 0.9),
-              ],
-            ),
-          ),
           padding: const EdgeInsets.all(32),
           child: AutofillGroup(
             child: Form(
@@ -138,19 +127,20 @@ class _LoginFormState extends State<LoginForm> {
         Text(
           'Sign in to continue',
           style: TextStyle(
-            color: Colors.grey[400],
+            color: widget.themeColors.primary.withValues(alpha: 0.7),
             fontSize: 14,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
         Container(
-          height: 1,
+          height: 2,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 Colors.transparent,
-                widget.themeColors.primary.withValues(alpha: 0.3),
+                widget.themeColors.primary.withValues(alpha: 0.5),
+                widget.themeColors.secondary.withValues(alpha: 0.3),
                 Colors.transparent,
               ],
             ),
@@ -188,7 +178,7 @@ class _LoginFormState extends State<LoginForm> {
           _obscurePassword
               ? Icons.visibility_outlined
               : Icons.visibility_off_outlined,
-          color: Colors.grey[400],
+          color: widget.themeColors.primary.withValues(alpha: 0.6),
         ),
         onPressed: () {
           setState(() => _obscurePassword = !_obscurePassword);
@@ -204,10 +194,12 @@ class _LoginFormState extends State<LoginForm> {
           onPressed: authProvider.isLoading ? null : _handleLogin,
           isLoading: authProvider.isLoading,
           gradient: LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
             colors: [
-              widget.themeColors.secondary,
               widget.themeColors.primary,
-              widget.themeColors.tertiary,
+              widget.themeColors.secondary,
+              // widget.themeColors.tertiary,
             ],
           ),
           child: const Text(

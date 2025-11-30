@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 
-/// Reusable themed text field with consistent styling
 class ThemedTextField extends StatelessWidget {
   final TextEditingController controller;
   final ThemeColors themeColors;
@@ -44,6 +43,9 @@ class ThemedTextField extends StatelessWidget {
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         labelText: labelText,
+        labelStyle: TextStyle(
+          color: themeColors.primary.withValues(alpha: 0.7),
+        ),
         prefixIcon: prefixIcon != null
             ? Icon(
                 prefixIcon,
@@ -53,11 +55,11 @@ class ThemedTextField extends StatelessWidget {
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: themeColors.background.withValues(alpha: 0.5),
-        border: _buildBorder(Colors.white.withValues(alpha: 0.1)),
-        enabledBorder: _buildBorder(Colors.white.withValues(alpha: 0.1)),
+        border: _buildBorder(themeColors.primary.withValues(alpha: 0.2)),
+        enabledBorder: _buildBorder(themeColors.primary.withValues(alpha: 0.2)),
         focusedBorder: _buildBorder(themeColors.primary, width: 2),
-        errorBorder: _buildBorder(Colors.red),
-        focusedErrorBorder: _buildBorder(Colors.red, width: 2),
+        errorBorder: _buildBorder(themeColors.tertiary),
+        focusedErrorBorder: _buildBorder(themeColors.tertiary, width: 2),
       ),
       validator: validator,
       onFieldSubmitted: onFieldSubmitted,

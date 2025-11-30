@@ -43,68 +43,61 @@ class _SignupFormState extends State<SignupForm> {
   }
 
   Future<void> _handleSignup() async {
-    setState(() => _autoValidate = true);
+  setState(() => _autoValidate = true);
+  
+  if (!_formKey.currentState!.validate()) return;
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null;
+  });
+
+  try {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+    final name = _nameController.text.trim();
+
+    await _authService.signup(email, password, name);
+
+    if (!mounted) return;
+
+    // Use query parameters (RECOMMENDED)
+    context.go('/email-verification?email=${Uri.encodeComponent(email)}');
     
-    if (!_formKey.currentState!.validate()) return;
+    // OR if you prefer to use extra (less reliable on web):
+    // context.go('/email-verification', extra: {'email': email});
 
+  } catch (e) {
+    if (!mounted) return;
+    
     setState(() {
-      _isLoading = true;
-      _errorMessage = null;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      _isLoading = false;
     });
-
-    try {
-      await _authService.signup(
-        _emailController.text.trim(),
-        _passwordController.text,
-        _nameController.text.trim(),
-      );
-
-      if (!mounted) return;
-
-      context.go('/email-verification', extra: {
-        'email': _emailController.text.trim(),
-      });
-    } catch (e) {
-      if (!mounted) return;
-      
-      setState(() {
-        _errorMessage = e.toString().replaceAll('Exception: ', '');
-        _isLoading = false;
-      });
-    }
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: widget.themeColors.surface.withValues(alpha: 0.5),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            widget.themeColors.surface.withValues(alpha: 0.6),
+            widget.themeColors.background.withValues(alpha: 0.8),
+          ],
+        ),
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
-          width: 1,
+          color: widget.themeColors.primary.withValues(alpha: 0.2),
+          width: 1.5,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 30,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                widget.themeColors.surface.withValues(alpha: 0.8),
-                widget.themeColors.background.withValues(alpha: 0.9),
-              ],
-            ),
-          ),
           padding: const EdgeInsets.all(32),
           child: Form(
             key: _formKey,
@@ -166,19 +159,20 @@ class _SignupFormState extends State<SignupForm> {
         Text(
           'Sign up to get started',
           style: TextStyle(
-            color: Colors.grey[400],
+            color: widget.themeColors.primary.withValues(alpha: 0.7),
             fontSize: 14,
           ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
         Container(
-          height: 1,
+          height: 2,
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
                 Colors.transparent,
-                widget.themeColors.primary.withValues(alpha: 0.3),
+                widget.themeColors.primary.withValues(alpha: 0.5),
+                widget.themeColors.secondary.withValues(alpha: 0.3),
                 Colors.transparent,
               ],
             ),
@@ -227,7 +221,7 @@ class _SignupFormState extends State<SignupForm> {
           _obscurePassword
               ? Icons.visibility_outlined
               : Icons.visibility_off_outlined,
-          color: Colors.grey[400],
+          color: widget.themeColors.primary.withValues(alpha: 0.6),
         ),
         onPressed: () {
           setState(() => _obscurePassword = !_obscurePassword);
@@ -237,38 +231,40 @@ class _SignupFormState extends State<SignupForm> {
   }
 
   Widget _buildConfirmPasswordField() {
-  return ThemedTextField(
-    controller: _confirmPasswordController,
-    themeColors: widget.themeColors,
-    labelText: 'Confirm Password',
-    prefixIcon: Icons.lock_outlined,
-    obscureText: _obscureConfirmPassword,
-    enabled: !_isLoading,
-    validator: _validateConfirmPassword,
-    textInputAction: TextInputAction.done, 
-    onFieldSubmitted: (_) => _handleSignup(), 
-    suffixIcon: IconButton(
-      icon: Icon(
-        _obscureConfirmPassword
-            ? Icons.visibility_outlined
-            : Icons.visibility_off_outlined,
-        color: Colors.grey[400],
+    return ThemedTextField(
+      controller: _confirmPasswordController,
+      themeColors: widget.themeColors,
+      labelText: 'Confirm Password',
+      prefixIcon: Icons.lock_outlined,
+      obscureText: _obscureConfirmPassword,
+      enabled: !_isLoading,
+      validator: _validateConfirmPassword,
+      textInputAction: TextInputAction.done, 
+      onFieldSubmitted: (_) => _handleSignup(), 
+      suffixIcon: IconButton(
+        icon: Icon(
+          _obscureConfirmPassword
+              ? Icons.visibility_outlined
+              : Icons.visibility_off_outlined,
+          color: widget.themeColors.primary.withValues(alpha: 0.6),
+        ),
+        onPressed: () {
+          setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+        },
       ),
-      onPressed: () {
-        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-      },
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildSignUpButton() {
     return GradientButton(
       onPressed: _isLoading ? null : _handleSignup,
       isLoading: _isLoading,
       gradient: LinearGradient(
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
         colors: [
-          widget.themeColors.secondary,
           widget.themeColors.primary,
+          widget.themeColors.secondary,
           widget.themeColors.tertiary,
         ],
       ),

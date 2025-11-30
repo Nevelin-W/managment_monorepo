@@ -3,11 +3,13 @@ import 'package:google_fonts/google_fonts.dart';
 
 // Theme configuration class
 class AppTheme {
-  // Available color schemes
+  // Available color schemes - Modern palettes based on color theory
+  
+  // Forest: Emerald green + warm amber + soft coral
   static const ColorScheme emeraldScheme = ColorScheme(
-    primary: Color(0xFF10B981),
-    secondary: Color(0xFF059669),
-    tertiary: Color(0xFF34D399),
+    primary: Color(0xFF10B981),      // Emerald green
+    secondary: Color(0xFFF59E0B),    // Warm amber
+    tertiary: Color(0xFFFF6B9D),     // Soft coral
     surface: Color(0xFF1F2937),
     error: Color(0xFFEF4444),
     onPrimary: Colors.white,
@@ -18,10 +20,11 @@ class AppTheme {
     brightness: Brightness.dark,
   );
 
+  // Ocean: Deep blue + cyan + coral orange (complementary)
   static const ColorScheme oceanScheme = ColorScheme(
-    primary: Color(0xFF3B82F6),
-    secondary: Color(0xFF2563EB),
-    tertiary: Color(0xFF60A5FA),
+    primary: Color(0xFF3B82F6),      // Royal blue
+    secondary: Color(0xFF06B6D4),    // Cyan
+    tertiary: Color(0xFFFF7849),     // Coral orange
     surface: Color(0xFF1E293B),
     error: Color(0xFFEF4444),
     onPrimary: Colors.white,
@@ -32,6 +35,7 @@ class AppTheme {
     brightness: Brightness.dark,
   );
 
+  // Sunset: Warm amber + vibrant red + golden yellow (keeping original)
   static const ColorScheme sunsetScheme = ColorScheme(
     primary: Color(0xFFF59E0B),
     secondary: Color(0xFFEF4444),
@@ -46,10 +50,11 @@ class AppTheme {
     brightness: Brightness.dark,
   );
 
+  // Lavender: Purple + pink + mint (triadic harmony)
   static const ColorScheme purpleScheme = ColorScheme(
-    primary: Color(0xFFA855F7),
-    secondary: Color(0xFF9333EA),
-    tertiary: Color(0xFFC084FC),
+    primary: Color(0xFFA855F7),      // Purple
+    secondary: Color(0xFFEC4899),    // Hot pink
+    tertiary: Color(0xFF34D399),     // Mint green
     surface: Color(0xFF2D1B4E),
     error: Color(0xFFEF4444),
     onPrimary: Colors.white,
@@ -60,24 +65,26 @@ class AppTheme {
     brightness: Brightness.dark,
   );
 
+  // Arctic: Cyan + indigo + lime (cool with pop)
   static const ColorScheme mintScheme = ColorScheme(
-    primary: Color(0xFF06B6D4),
-    secondary: Color(0xFF0891B2),
-    tertiary: Color(0xFF22D3EE),
+    primary: Color(0xFF06B6D4),      // Cyan
+    secondary: Color(0xFF6366F1),    // Indigo
+    tertiary: Color(0xFFBEF264),     // Lime green
     surface: Color(0xFF164E63),
     error: Color(0xFFEF4444),
     onPrimary: Colors.white,
     onSecondary: Colors.white,
-    onTertiary: Colors.white,
+    onTertiary: Color(0xFF1F2937),   // Dark text on lime
     onSurface: Colors.white,
     onError: Colors.white,
     brightness: Brightness.dark,
   );
 
+  // Rose: Pink + purple + peach (analogous warm)
   static const ColorScheme roseScheme = ColorScheme(
-    primary: Color(0xFFEC4899),
-    secondary: Color(0xFFDB2777),
-    tertiary: Color(0xFFF472B6),
+    primary: Color(0xFFEC4899),      // Hot pink
+    secondary: Color(0xFF8B5CF6),    // Violet
+    tertiary: Color(0xFFFB923C),     // Peach orange
     surface: Color(0xFF4C1D3C),
     error: Color(0xFFEF4444),
     onPrimary: Colors.white,
@@ -270,16 +277,16 @@ class ThemeColors {
 
   static const ThemeColors emerald = ThemeColors(
     primary: Color(0xFF10B981),
-    secondary: Color(0xFF059669),
-    tertiary: Color(0xFF34D399),
+    secondary: Color(0xFFF59E0B),
+    tertiary: Color(0xFFFF6B9D),
     background: Color(0xFF111827),
     surface: Color(0xFF1F2937),
   );
 
   static const ThemeColors ocean = ThemeColors(
     primary: Color(0xFF3B82F6),
-    secondary: Color(0xFF2563EB),
-    tertiary: Color(0xFF60A5FA),
+    secondary: Color(0xFF06B6D4),
+    tertiary: Color(0xFFFF7849),
     background: Color(0xFF0F172A),
     surface: Color(0xFF1E293B),
   );
@@ -294,24 +301,24 @@ class ThemeColors {
 
   static const ThemeColors purple = ThemeColors(
     primary: Color(0xFFA855F7),
-    secondary: Color(0xFF9333EA),
-    tertiary: Color(0xFFC084FC),
+    secondary: Color(0xFFEC4899),
+    tertiary: Color(0xFF34D399),
     background: Color(0xFF1A0B2E),
     surface: Color(0xFF2D1B4E),
   );
 
   static const ThemeColors mint = ThemeColors(
     primary: Color(0xFF06B6D4),
-    secondary: Color(0xFF0891B2),
-    tertiary: Color(0xFF22D3EE),
+    secondary: Color(0xFF6366F1),
+    tertiary: Color(0xFFBEF264),
     background: Color(0xFF083344),
     surface: Color(0xFF164E63),
   );
 
   static const ThemeColors rose = ThemeColors(
     primary: Color(0xFFEC4899),
-    secondary: Color(0xFFDB2777),
-    tertiary: Color(0xFFF472B6),
+    secondary: Color(0xFF8B5CF6),
+    tertiary: Color(0xFFFB923C),
     background: Color(0xFF2D0A26),
     surface: Color(0xFF4C1D3C),
   );

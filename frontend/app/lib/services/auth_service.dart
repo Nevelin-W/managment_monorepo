@@ -221,34 +221,37 @@ class AuthService {
   }
 
   Future<bool> confirmEmail(String email, String code) async {
-    final sanitizedEmail = LogSanitizer.email(email);
-    _log.info('Email confirmation attempt', {'email': sanitizedEmail});
+  final sanitizedEmail = LogSanitizer.email(email);
+  _log.info('Email confirmation attempt', {'email': sanitizedEmail});
+  
+  try {
+
     
-    try {
-      final response = await http.post(
-        Uri.parse(AppConfig.authConfirmUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'code': code,
-        }),
-      );
+    final requestBody = jsonEncode({
+      'email': email,
+      'code': code,
+    });
+    
+    final response = await http.post(
+      Uri.parse(AppConfig.authConfirmUrl),
+      headers: {'Content-Type': 'application/json'},
+      body: requestBody,
+    );
 
-      if (response.statusCode == 200) {
-        _log.info('Email confirmed successfully', {'email': sanitizedEmail});
-        return true;
-      } else {
-        final error = jsonDecode(response.body);
-        final errorMsg = error['error'] ?? 'Email confirmation failed';
-        _log.warning('Email confirmation failed', {'error': errorMsg, 'email': sanitizedEmail});
-        throw Exception(errorMsg);
-      }
-    } catch (e, stackTrace) {
-      _log.error('Confirmation error', error: e, stackTrace: stackTrace, context: {'email': sanitizedEmail});
-      rethrow;
+    if (response.statusCode == 200) {
+      _log.info('Email confirmed successfully', {'email': sanitizedEmail});
+      return true;
+    } else {
+      final error = jsonDecode(response.body);
+      final errorMsg = error['error'] ?? 'Email confirmation failed';
+      _log.warning('Email confirmation failed', {'error': errorMsg, 'email': sanitizedEmail});
+      throw Exception(errorMsg);
     }
+  } catch (e, stackTrace) {
+    _log.error('Confirmation error', error: e, stackTrace: stackTrace, context: {'email': sanitizedEmail});
+    rethrow;
   }
-
+}
   Future<bool> resendCode(String email) async {
     final sanitizedEmail = LogSanitizer.email(email);
     _log.info('Resending verification code', {'email': sanitizedEmail});
