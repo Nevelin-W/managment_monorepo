@@ -7,6 +7,7 @@ import '../../config/theme.dart';
 import '../../widgets/auth/login_form.dart';
 import '../../widgets/auth/auth_screen_layout.dart';
 import '../../widgets/common/brand_header.dart';
+import '../../widgets/auth/auth_footer.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -33,7 +34,6 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       final authProvider = context.read<AuthProvider>();
-
       if (authProvider.isAuthenticated) {
         context.go('/home');
       }
@@ -52,9 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          context.go('/home');
-        }
+        if (mounted) context.go('/home');
       });
     }
 
@@ -65,56 +63,13 @@ class _LoginScreenState extends State<LoginScreen> {
           themeColors: themeColors,
           icon: Icons.lock_outline,
         ),
-        footer: _SignUpFooter(themeColors: themeColors),
-        child: LoginForm(themeColors: themeColors),
-      ),
-    );
-  }
-}
-
-class _SignUpFooter extends StatelessWidget {
-  final ThemeColors themeColors;
-
-  const _SignUpFooter({required this.themeColors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: themeColors.surface.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+        footer: AuthFooter(
+          themeColors: themeColors,
+          promptText: "Don't have an account? ",
+          actionText: 'Sign Up',
+          onActionPressed: () => context.go('/signup'),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            "Don't have an account? ",
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.go('/signup'),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              'Sign Up',
-              style: TextStyle(
-                color: themeColors.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
+        child: LoginForm(themeColors: themeColors),
       ),
     );
   }

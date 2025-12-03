@@ -6,6 +6,7 @@ import '../../config/theme.dart';
 import '../../widgets/auth/signup_form.dart';
 import '../../widgets/auth/auth_screen_layout.dart';
 import '../../widgets/common/brand_header.dart';
+import '../../widgets/auth/auth_footer.dart';
 
 class SignupScreen extends StatelessWidget {
   const SignupScreen({super.key});
@@ -23,56 +24,13 @@ class SignupScreen extends StatelessWidget {
           themeColors: themeColors,
           icon: Icons.lock_outline,
         ),
-        footer: _SignInFooter(themeColors: themeColors),
-        child: SignupForm(themeColors: themeColors),
-      ),
-    );
-  }
-}
-
-class _SignInFooter extends StatelessWidget {
-  final ThemeColors themeColors;
-
-  const _SignInFooter({required this.themeColors});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: themeColors.surface.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+        footer: AuthFooter(
+          themeColors: themeColors,
+          promptText: 'Already have an account? ',
+          actionText: 'Sign In',
+          onActionPressed: () => context.go('/login'),
         ),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Already have an account? ',
-            style: TextStyle(
-              color: Colors.grey[400],
-              fontSize: 14,
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.go('/login'),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(
-              'Sign In',
-              style: TextStyle(
-                color: themeColors.primary,
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-              ),
-            ),
-          ),
-        ],
+        child: SignupForm(themeColors: themeColors),
       ),
     );
   }

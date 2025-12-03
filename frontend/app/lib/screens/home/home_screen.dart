@@ -7,13 +7,13 @@ import '../../providers/subscription_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../widgets/subscriptions/add_subscription_dialog.dart';
 import '../../widgets/subscriptions/edit_subscription_dialog.dart';
-import '../../widgets/common/subscription_card.dart';
-import '../../widgets/common/stat_card.dart';
 import '../../widgets/common/empty_state.dart';
+import '../../widgets/common/subscription_card.dart';
 import '../../widgets/common/screen_background.dart';
 import '../../widgets/common/orbital_loading_indicator.dart';
+import '../../widgets/common/confirmation_dialog.dart';
+import '../../widgets/common/app_snackbar.dart';
 import '../../models/subscription_model.dart';
-import 'dart:math' as math;
 
 enum SubscriptionFilter {
   mostExpensive,
@@ -59,60 +59,34 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
 
     final themeColors = context.read<ThemeProvider>().themeColors;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await ConfirmationDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: themeColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Subscription',
-            style: TextStyle(color: Colors.white)),
-        content: Text(
+      themeColors: themeColors,
+      title: 'Delete Subscription',
+      message:
           'Are you sure you want to delete "${subscription.name}"? This action cannot be undone.',
-          style: TextStyle(color: Colors.grey[400]),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey[400])),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      confirmText: 'Delete',
+      isDestructive: true,
     );
 
-    if (confirmed == true && mounted) {
+    if (confirmed && mounted) {
       try {
         await context
             .read<SubscriptionProvider>()
             .deleteSubscription(subscription.id);
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('${subscription.name} deleted successfully'),
-              backgroundColor: themeColors.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-            ),
+          AppSnackBar.showSuccess(
+            context,
+            '${subscription.name} deleted successfully',
+            themeColors: themeColors,
           );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete subscription: $e'),
-              backgroundColor: Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10)),
-              duration: const Duration(seconds: 5),
-            ),
+          AppSnackBar.showError(
+            context,
+            'Failed to delete subscription: $e',
           );
         }
       }
@@ -204,8 +178,10 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: themeColors.primary,
         elevation: 8,
         icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Add',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        label: const Text(
+          'Add',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
       ),
     );
   }
@@ -322,12 +298,14 @@ class _CompactStatsGrid extends StatelessWidget {
     required this.subscriptions,
   });
 
-  double get _totalMonthlySpend {
+  double _getTotalMonthlySpend() {
     return subscriptions.fold(0.0, (sum, sub) => sum + sub.amount);
   }
 
   @override
   Widget build(BuildContext context) {
+    final totalMonthly = _getTotalMonthlySpend();
+    
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
@@ -365,7 +343,7 @@ class _CompactStatsGrid extends StatelessWidget {
               Expanded(
                 child: _StatItem(
                   label: 'Monthly',
-                  value: '\$${_totalMonthlySpend.toStringAsFixed(0)}',
+                  value: '\$${totalMonthly.toStringAsFixed(0)}',
                   icon: Icons.payments_outlined,
                   themeColors: themeColors,
                 ),
@@ -378,7 +356,7 @@ class _CompactStatsGrid extends StatelessWidget {
               Expanded(
                 child: _StatItem(
                   label: 'Yearly',
-                  value: '\$${(_totalMonthlySpend * 12).toStringAsFixed(0)}',
+                  value: '\$${(totalMonthly * 12).toStringAsFixed(0)}',
                   icon: Icons.calendar_today_outlined,
                   themeColors: themeColors,
                 ),
@@ -619,7 +597,7 @@ class _SubscriptionsSection extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
-                _ViewAllButtonWidget(
+                _ViewAllButton(
                   onTap: onViewAll,
                   themeColors: themeColors,
                 ),
@@ -661,107 +639,8 @@ class _FilterChips extends StatelessWidget {
     required this.themeColors,
   });
 
-  String _getFilterLabel(SubscriptionFilter filter) {
-    switch (filter) {
-      case SubscriptionFilter.upcoming:
-        return 'Upcoming';
-      case SubscriptionFilter.mostExpensive:
-        return 'Most Expensive';
-      case SubscriptionFilter.recent:
-        return 'Recent';
-    }
-  }
-
-  IconData _getFilterIcon(SubscriptionFilter filter) {
-    switch (filter) {
-      case SubscriptionFilter.upcoming:
-        return Icons.schedule;
-      case SubscriptionFilter.mostExpensive:
-        return Icons.trending_up;
-      case SubscriptionFilter.recent:
-        return Icons.access_time;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isMobile = screenWidth < 600;
-
-    if (isMobile) {
-      // Mobile: Use dropdown
-      return PopupMenuButton<SubscriptionFilter>(
-        initialValue: selectedFilter,
-        onSelected: onFilterChanged,
-        offset: const Offset(0, 50),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.1),
-          ),
-        ),
-        color: themeColors.surface,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                themeColors.primary.withValues(alpha: 0.3),
-                themeColors.secondary.withValues(alpha: 0.2),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: themeColors.primary.withValues(alpha: 0.5),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _getFilterIcon(selectedFilter),
-                size: 18,
-                color: themeColors.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                _getFilterLabel(selectedFilter),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Icon(
-                Icons.arrow_drop_down,
-                size: 20,
-                color: themeColors.primary,
-              ),
-            ],
-          ),
-        ),
-        itemBuilder: (context) => [
-          _buildMenuItem(
-            SubscriptionFilter.upcoming,
-            'Upcoming',
-            Icons.schedule,
-          ),
-          _buildMenuItem(
-            SubscriptionFilter.mostExpensive,
-            'Most Expensive',
-            Icons.trending_up,
-          ),
-          _buildMenuItem(
-            SubscriptionFilter.recent,
-            'Recent',
-            Icons.access_time,
-          ),
-        ],
-      );
-    }
-
-    // Web/Tablet: Use chips
     return Row(
       children: [
         _FilterChip(
@@ -790,58 +669,22 @@ class _FilterChips extends StatelessWidget {
       ],
     );
   }
-
-  PopupMenuItem<SubscriptionFilter> _buildMenuItem(
-    SubscriptionFilter filter,
-    String label,
-    IconData icon,
-  ) {
-    final isSelected = selectedFilter == filter;
-    return PopupMenuItem<SubscriptionFilter>(
-      value: filter,
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: 18,
-            color: isSelected ? themeColors.primary : Colors.grey[400],
-          ),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : Colors.grey[400],
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              fontSize: 14,
-            ),
-          ),
-          const Spacer(),
-          if (isSelected)
-            Icon(
-              Icons.check,
-              size: 18,
-              color: themeColors.primary,
-            ),
-        ],
-      ),
-    );
-  }
 }
 
-class _ViewAllButtonWidget extends StatefulWidget {
+class _ViewAllButton extends StatefulWidget {
   final VoidCallback onTap;
   final ThemeColors themeColors;
 
-  const _ViewAllButtonWidget({
+  const _ViewAllButton({
     required this.onTap,
     required this.themeColors,
   });
 
   @override
-  State<_ViewAllButtonWidget> createState() => _ViewAllButtonWidgetState();
+  State<_ViewAllButton> createState() => _ViewAllButtonState();
 }
 
-class _ViewAllButtonWidgetState extends State<_ViewAllButtonWidget> {
+class _ViewAllButtonState extends State<_ViewAllButton> {
   bool _isHovered = false;
 
   @override

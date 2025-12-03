@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../../config/theme.dart';
 import '../common/gradient_button.dart';
 import '../common/info_box.dart';
+import '../auth/form_container.dart';
 
 class EmailVerificationForm extends StatefulWidget {
   final ThemeColors themeColors;
@@ -55,9 +56,7 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
     super.dispose();
   }
 
-  String _getCode() {
-    return _controllers.map((c) => c.text).join();
-  }
+  String _getCode() => _controllers.map((c) => c.text).join();
 
   void _clearCode() {
     for (var controller in _controllers) {
@@ -66,132 +65,146 @@ class _EmailVerificationFormState extends State<EmailVerificationForm> {
     _focusNodes[0].requestFocus();
   }
 
-Future<void> _verifyCode() async {
-  final code = _getCode();
-  
-  if (code.length != 6) {
-    setState(() => _errorMessage = 'Please enter all 6 digits');
-    return;
-  }
-
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-    _successMessage = null;
-  });
-
-  try {
-    // Explicitly await and assign to ensure proper Future completion
-    await _authService.confirmEmail(widget.email, code).then((_) {});
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Email verified successfully!'),
-        backgroundColor: widget.themeColors.primary,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
-      ),
-    );
-
-    context.go('/login');
-  } catch (e) {
-    if (!mounted) return;
+  Future<void> _verifyCode() async {
+    final code = _getCode();
+    
+    if (code.length != 6) {
+      setState(() => _errorMessage = 'Please enter all 6 digits');
+      return;
+    }
 
     setState(() {
-      _errorMessage = e.toString().contains('Exception: ')
-          ? e.toString().replaceAll('Exception: ', '')
-          : e.toString();
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
     });
-    _clearCode();
+
+    try {
+      await _authService.confirmEmail(widget.email, code);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Email verified successfully!'),
+          backgroundColor: widget.themeColors.primary,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+
+      context.go('/login');
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isLoading = false;
+      });
+      _clearCode();
+    }
   }
-}
 
-Future<void> _resendCode() async {
-  setState(() {
-    _isResending = true;
-    _errorMessage = null;
-    _successMessage = null;
-  });
-
-  try {
-    await _authService.resendCode(widget.email).then((_) {});
-
-    if (!mounted) return;
-
+  Future<void> _resendCode() async {
     setState(() {
-      _successMessage = 'Verification code resent! Check your email.';
-      _isResending = false;
+      _isResending = true;
+      _errorMessage = null;
+      _successMessage = null;
     });
-    _clearCode();
-  } catch (e) {
-    if (!mounted) return;
 
-    setState(() {
-      _errorMessage = e.toString().replaceAll('Exception: ', '');
-      _isResending = false;
-    });
+    try {
+      await _authService.resendCode(widget.email);
+
+      if (!mounted) return;
+
+      setState(() {
+        _successMessage = 'Verification code resent! Check your email.';
+        _isResending = false;
+      });
+      _clearCode();
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+        _isResending = false;
+      });
+    }
   }
-}
+
+  void _handlePaste(String pastedText, int startIndex) {
+    final digits = pastedText.replaceAll(RegExp(r'\D'), '');
+    
+    for (int i = 0; i < digits.length && (startIndex + i) < 6; i++) {
+      _controllers[startIndex + i].text = digits[i];
+    }
+    
+    final nextEmptyIndex = _controllers.indexWhere((c) => c.text.isEmpty);
+    if (nextEmptyIndex != -1) {
+      _focusNodes[nextEmptyIndex].requestFocus();
+    } else {
+      _focusNodes[5].unfocus();
+      _verifyCode();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            widget.themeColors.surface.withValues(alpha: 0.6),
-            widget.themeColors.background.withValues(alpha: 0.8),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: widget.themeColors.primary.withValues(alpha: 0.2),
-          width: 1.5,
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildTitle(),
-              const SizedBox(height: 32),
-              _buildCodeInput(),
-              const SizedBox(height: 24),
-              if (_errorMessage != null)
-                InfoBox(
-                  themeColors: widget.themeColors,
-                  icon: Icons.error_outline,
-                  message: _errorMessage!,
-                  type: InfoBoxType.error,
-                ),
-              if (_successMessage != null)
-                InfoBox(
-                  themeColors: widget.themeColors,
-                  icon: Icons.check_circle_outline,
-                  message: _successMessage!,
-                  type: InfoBoxType.success,
-                ),
-              if (_errorMessage != null || _successMessage != null)
-                const SizedBox(height: 24),
-              _buildVerifyButton(),
-              const SizedBox(height: 20),
-              _buildResendSection(),
-            ],
+    return FormContainer(
+      themeColors: widget.themeColors,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 32),
+          _buildCodeInput(),
+          const SizedBox(height: 24),
+          if (_errorMessage != null)
+            InfoBox(
+              themeColors: widget.themeColors,
+              icon: Icons.error_outline,
+              message: _errorMessage!,
+              type: InfoBoxType.error,
+            ),
+          if (_successMessage != null)
+            InfoBox(
+              themeColors: widget.themeColors,
+              icon: Icons.check_circle_outline,
+              message: _successMessage!,
+              type: InfoBoxType.success,
+            ),
+          if (_errorMessage != null || _successMessage != null)
+            const SizedBox(height: 24),
+          GradientButton(
+            onPressed: _isLoading ? null : _verifyCode,
+            isLoading: _isLoading,
+            gradient: LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                widget.themeColors.primary,
+                widget.themeColors.secondary,
+                widget.themeColors.tertiary,
+              ],
+            ),
+            child: const Text(
+              'Verify Email',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 20),
+          _buildResendSection(),
+        ],
       ),
     );
   }
 
-  Widget _buildTitle() {
+  Widget _buildHeader() {
     return Column(
       children: [
         const Text(
@@ -299,8 +312,7 @@ Future<void> _resendCode() async {
         ),
         onChanged: (value) {
           if (value.length > 1) {
-            final pastedText = value;
-            _handlePaste(pastedText, index);
+            _handlePaste(value, index);
             return;
           }
           
@@ -321,47 +333,6 @@ Future<void> _resendCode() async {
             }
           }
         },
-      ),
-    );
-  }
-
-  void _handlePaste(String pastedText, int startIndex) {
-    final digits = pastedText.replaceAll(RegExp(r'\D'), '');
-    
-    for (int i = 0; i < digits.length && (startIndex + i) < 6; i++) {
-      _controllers[startIndex + i].text = digits[i];
-    }
-    
-    final nextEmptyIndex = _controllers.indexWhere((c) => c.text.isEmpty);
-    if (nextEmptyIndex != -1) {
-      _focusNodes[nextEmptyIndex].requestFocus();
-    } else {
-      _focusNodes[5].unfocus();
-      _verifyCode();
-    }
-  }
-
-  Widget _buildVerifyButton() {
-    return GradientButton(
-      onPressed: _isLoading ? null : _verifyCode,
-      isLoading: _isLoading,
-      gradient: LinearGradient(
-        begin: Alignment.centerLeft,
-        end: Alignment.centerRight,
-        colors: [
-          widget.themeColors.primary,
-          widget.themeColors.secondary,
-          widget.themeColors.tertiary,
-        ],
-      ),
-      child: const Text(
-        'Verify Email',
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          letterSpacing: 0.5,
-        ),
       ),
     );
   }
