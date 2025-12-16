@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../features/subscriptions/models/subscription_model.dart';
-import '../../../providers/subscription_provider.dart';
+import '../../../features/subscriptions/providers/subscription_provider.dart';
 import '../../../core/widgets/common/dialog_wrapper.dart';
 import '../../../core/widgets/common/dialog_header.dart';
 import '../../../core/widgets/common/dialog_actions.dart';

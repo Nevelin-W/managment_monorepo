@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; // ADD THIS
 import '../../../features/subscriptions/models/subscription_model.dart';
+import '../../../features/subscriptions/providers/subscription_preferences_provider.dart';
 import '../../../core/config/theme.dart';
 import 'package:flutter/foundation.dart';
 
@@ -28,16 +30,22 @@ class SubscriptionCard extends StatefulWidget {
 class _SubscriptionCardState extends State<SubscriptionCard> {
   bool _isHovered = false;
   bool get _showMenuButton {
-  final isTouch = !kIsWeb || MediaQuery.of(context).size.width < 600;
-  return isTouch ? true : _isHovered;
-}
+    final isTouch = !kIsWeb || MediaQuery.of(context).size.width < 600;
+    return isTouch ? true : _isHovered;
+  }
 
   @override
   Widget build(BuildContext context) {
-    return widget.isCompact ? _buildCompactCard() : _buildFullCard();
+    // Get preferences provider
+    final prefs = context.watch<SubscriptionPreferencesProvider>();
+    
+    // Use compact view preference if not explicitly set
+    final isCompact = widget.isCompact || prefs.compactView;
+    
+    return isCompact ? _buildCompactCard(prefs) : _buildFullCard(prefs);
   }
 
-  Widget _buildCompactCard() {
+  Widget _buildCompactCard(SubscriptionPreferencesProvider prefs) {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -72,7 +80,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          _formatNextBillingDate(),
+                          _formatNextBillingDate(prefs),
                           style: TextStyle(
                             color: Colors.grey[400],
                             fontSize: 13,
@@ -87,7 +95,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '\$${widget.subscription.amount.toStringAsFixed(2)}',
+                    prefs.formatAmount(widget.subscription.amount),
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -114,7 +122,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
     );
   }
 
-  Widget _buildFullCard() {
+  Widget _buildFullCard(SubscriptionPreferencesProvider prefs) {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -161,7 +169,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
                             ),
                             const SizedBox(width: 6),
                             Text(
-                              _formatNextBillingDate(),
+                              _formatNextBillingDate(prefs),
                               style: TextStyle(
                                 color: Colors.grey[400],
                                 fontSize: 13,
@@ -183,7 +191,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
                   _buildBillingCycleBadge(),
                   const Spacer(),
                   Text(
-                    '\$${widget.subscription.amount.toStringAsFixed(2)}',
+                    prefs.formatAmount(widget.subscription.amount),
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -333,17 +341,17 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
   Widget _buildHoverMenu() {
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 200),
-    opacity: _showMenuButton ? 1.0 : 0.0,
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      width: _showMenuButton ? 36 : 0,
-      child: PopupMenuButton<String>(
-        tooltip: '', // disable "Show Menu"
-        icon: Icon(
-          Icons.more_vert,
-          color: widget.themeColors.primary,
-          size: widget.isCompact ? 20 : 22,
-        ),
+      opacity: _showMenuButton ? 1.0 : 0.0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: _showMenuButton ? 36 : 0,
+        child: PopupMenuButton<String>(
+          tooltip: '', // disable "Show Menu"
+          icon: Icon(
+            Icons.more_vert,
+            color: widget.themeColors.primary,
+            size: widget.isCompact ? 20 : 22,
+          ),
           color: widget.themeColors.surface,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -386,7 +394,7 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
     );
   }
 
-  String _formatNextBillingDate() {
+  String _formatNextBillingDate(SubscriptionPreferencesProvider prefs) {
     final date = widget.subscription.nextBillingDate;
     final now = DateTime.now();
     final difference = date.difference(now).inDays;
@@ -395,7 +403,8 @@ class _SubscriptionCardState extends State<SubscriptionCard> {
     if (difference == 1) return 'Tomorrow';
     if (difference < 7) return 'In $difference days';
     
-    return '${date.day}/${date.month}/${date.year}';
+    // Use user's preferred date format
+    return prefs.formatDate(date);
   }
 
   String _getBillingCycleShort() {

@@ -70,6 +70,11 @@ class AppSnackBar {
       background: colorScheme.background,
       surface: colorScheme.surface,
     error: colorScheme.error,
+    onPrimary: colorScheme.onPrimary,
+    onSecondary: colorScheme.onSecondary,
+    onTertiary: colorScheme.onTertiary,
+    onSurface: colorScheme.onSurface,
+    onError: colorScheme.onError,
     );
   }
 }

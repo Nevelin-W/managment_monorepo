@@ -257,6 +257,11 @@ class ThemeColors {
   final Color background;
   final Color surface;
   final Color error;
+  final Color onPrimary;
+  final Color onSecondary;
+  final Color onTertiary;
+  final Color onSurface;
+  final Color onError;
 
   const ThemeColors({
     required this.primary,
@@ -265,6 +270,11 @@ class ThemeColors {
     required this.background,
     required this.surface,
     required this.error,
+    required this.onPrimary,
+    required this.onSecondary,
+    required this.onTertiary,
+    required this.onSurface,
+    required this.onError,
   });
 
   static ThemeColors fromColorScheme(ColorScheme scheme) {
@@ -275,60 +285,95 @@ class ThemeColors {
       background: scheme.surface,
       surface: scheme.surface,
       error: scheme.error,
+      onPrimary: scheme.onPrimary,
+      onSecondary: scheme.onSecondary,
+      onTertiary: scheme.onTertiary,
+      onSurface: scheme.onSurface,
+      onError: scheme.onError,
     );
   }
 
   static const ThemeColors emerald = ThemeColors(
-  primary: Color(0xFF10B981),
-  secondary: Color(0xFFF59E0B),
-  tertiary: Color(0xFFFF6B9D),
-  background: Color(0xFF111827),
-  surface: Color(0xFF1F2937),
-  error: Color(0xFFEF4444),
-);
+    primary: Color(0xFF10B981),
+    secondary: Color(0xFFF59E0B),
+    tertiary: Color(0xFFFF6B9D),
+    background: Color(0xFF111827),
+    surface: Color(0xFF1F2937),
+    error: Color(0xFFEF4444),
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    onTertiary: Colors.white,
+    onSurface: Colors.white,
+    onError: Colors.white,
+  );
 
-static const ThemeColors ocean = ThemeColors(
-  primary: Color(0xFF3B82F6),
-  secondary: Color(0xFF06B6D4),
-  tertiary: Color(0xFFFF7849),
-  background: Color(0xFF0F172A),
-  surface: Color(0xFF1E293B),
-  error: Color(0xFFEF4444),
-);
+  static const ThemeColors ocean = ThemeColors(
+    primary: Color(0xFF3B82F6),
+    secondary: Color(0xFF06B6D4),
+    tertiary: Color(0xFFFF7849),
+    background: Color(0xFF0F172A),
+    surface: Color(0xFF1E293B),
+    error: Color(0xFFEF4444),
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    onTertiary: Colors.white,
+    onSurface: Colors.white,
+    onError: Colors.white,
+  );
 
-static const ThemeColors sunset = ThemeColors(
-  primary: Color(0xFFF59E0B),
-  secondary: Color(0xFFEF4444),
-  tertiary: Color(0xFFFBBF24),
-  background: Color(0xFF1C1917),
-  surface: Color(0xFF292524),
-  error: Color(0xFFDC2626),
-);
+  static const ThemeColors sunset = ThemeColors(
+    primary: Color(0xFFF59E0B),
+    secondary: Color(0xFFEF4444),
+    tertiary: Color(0xFFFBBF24),
+    background: Color(0xFF1C1917),
+    surface: Color(0xFF292524),
+    error: Color(0xFFDC2626),
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    onTertiary: Colors.white,
+    onSurface: Colors.white,
+    onError: Colors.white,
+  );
 
-static const ThemeColors purple = ThemeColors(
-  primary: Color(0xFFA855F7),
-  secondary: Color(0xFFEC4899),
-  tertiary: Color(0xFF34D399),
-  background: Color(0xFF1A0B2E),
-  surface: Color(0xFF2D1B4E),
-  error: Color(0xFFEF4444),
-);
+  static const ThemeColors purple = ThemeColors(
+    primary: Color(0xFFA855F7),
+    secondary: Color(0xFFEC4899),
+    tertiary: Color(0xFF34D399),
+    background: Color(0xFF1A0B2E),
+    surface: Color(0xFF2D1B4E),
+    error: Color(0xFFEF4444),
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    onTertiary: Colors.white,
+    onSurface: Colors.white,
+    onError: Colors.white,
+  );
 
-static const ThemeColors mint = ThemeColors(
-  primary: Color(0xFF06B6D4),
-  secondary: Color(0xFF6366F1),
-  tertiary: Color(0xFFBEF264),
-  background: Color(0xFF083344),
-  surface: Color(0xFF164E63),
-  error: Color(0xFFEF4444),
-);
+  static const ThemeColors mint = ThemeColors(
+    primary: Color(0xFF06B6D4),
+    secondary: Color(0xFF6366F1),
+    tertiary: Color(0xFFBEF264),
+    background: Color(0xFF083344),
+    surface: Color(0xFF164E63),
+    error: Color(0xFFEF4444),
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    onTertiary: Color(0xFF1F2937),
+    onSurface: Colors.white,
+    onError: Colors.white,
+  );
 
-static const ThemeColors rose = ThemeColors(
-  primary: Color(0xFFEC4899),
-  secondary: Color(0xFF8B5CF6),
-  tertiary: Color(0xFFFB923C),
-  background: Color(0xFF2D0A26),
-  surface: Color(0xFF4C1D3C),
-  error: Color(0xFFEF4444),
-);
+  static const ThemeColors rose = ThemeColors(
+    primary: Color(0xFFEC4899),
+    secondary: Color(0xFF8B5CF6),
+    tertiary: Color(0xFFFB923C),
+    background: Color(0xFF2D0A26),
+    surface: Color(0xFF4C1D3C),
+    error: Color(0xFFEF4444),
+    onPrimary: Colors.white,
+    onSecondary: Colors.white,
+    onTertiary: Colors.white,
+    onSurface: Colors.white,
+    onError: Colors.white,
+  );
 }

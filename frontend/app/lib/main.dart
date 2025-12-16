@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'config/theme.dart';
-import 'config/routes.dart';
-import 'providers/auth_provider.dart';
-import 'providers/subscription_provider.dart';
-import 'providers/theme_provider.dart';
-import 'config/app_config.dart';
-import 'utils/app_logger.dart';
+import 'core/config/theme.dart';
+import 'core/router/app_router.dart';
+import 'features/auth/providers/auth_provider.dart';
+import 'features/subscriptions/providers/subscription_provider.dart';
+import 'features/subscriptions/providers/subscription_preferences_provider.dart'; // ADD THIS
+import 'features/home/providers/theme_provider.dart';
+import 'core/config/app_config.dart';
+import 'core/utils/app_logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -67,6 +68,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
+        ChangeNotifierProvider(create: (_) => SubscriptionPreferencesProvider()), // ADD THIS
       ],
       child: Consumer2<ThemeProvider, AuthProvider>(
         builder: (context, themeProvider, authProvider, _) {

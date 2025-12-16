@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../../core/config/theme.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/subscriptions/providers/subscription_provider.dart';
+import '../../../features/subscriptions/providers/subscription_preferences_provider.dart';
 import '../../../features/home/providers/theme_provider.dart';
 import '../../../features/subscriptions/widgets/add_subscription_dialog.dart';
 import '../../../features/subscriptions/widgets/edit_subscription_dialog.dart';
@@ -164,7 +165,7 @@ class _SubscriptionsHomeScreenState extends State<SubscriptionsHomeScreen> {
                       },
                       onEdit: _showEditSubscriptionDialog,
                       onDelete: _confirmDelete,
-                      onViewAll: () => context.go('/home/subscriptions'),
+                      onViewAll: () => context.go('/subscriptions/list'),
                     ),
                   ],
                 ],
@@ -231,21 +232,17 @@ class _ModernAppBar extends StatelessWidget {
             Row(
               children: [
                 _IconButton(
-                  icon: Icons.settings_outlined,
-                  onPressed: () => context.go('/home/settings'),
+                  icon: Icons.home_outlined,
+                  onPressed: () => context.go('/home'),
                   themeColors: themeColors,
+                  tooltip: 'Back to Home',
                 ),
                 const SizedBox(width: 8),
                 _IconButton(
-                  icon: Icons.logout,
-                  onPressed: () async {
-                    await context.read<AuthProvider>().logout();
-                    if (context.mounted) {
-                      context.go('/login');
-                    }
-                  },
+                  icon: Icons.tune_outlined,
+                  onPressed: () => context.go('/subscriptions/settings'),
                   themeColors: themeColors,
-                  color: themeColors.primary,
+                  tooltip: 'Subscription Settings',
                 ),
               ],
             ),
@@ -261,29 +258,34 @@ class _IconButton extends StatelessWidget {
   final VoidCallback onPressed;
   final ThemeColors themeColors;
   final Color? color;
+  final String? tooltip;
 
   const _IconButton({
     required this.icon,
     required this.onPressed,
     required this.themeColors,
     this.color,
+    this.tooltip,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: themeColors.surface.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+    return Tooltip(
+      message: tooltip ?? '',
+      child: Container(
+        decoration: BoxDecoration(
+          color: themeColors.surface.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.1),
+          ),
         ),
-      ),
-      child: IconButton(
-        icon: Icon(icon, color: color ?? Colors.grey[400], size: 20),
-        onPressed: onPressed,
-        padding: const EdgeInsets.all(8),
-        constraints: const BoxConstraints(),
+        child: IconButton(
+          icon: Icon(icon, color: color ?? Colors.grey[400], size: 20),
+          onPressed: onPressed,
+          padding: const EdgeInsets.all(8),
+          constraints: const BoxConstraints(),
+        ),
       ),
     );
   }
@@ -305,6 +307,7 @@ class _CompactStatsGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final totalMonthly = _getTotalMonthlySpend();
+    final prefs = context.watch<SubscriptionPreferencesProvider>(); 
     
     return SliverToBoxAdapter(
       child: Padding(
@@ -343,7 +346,7 @@ class _CompactStatsGrid extends StatelessWidget {
               Expanded(
                 child: _StatItem(
                   label: 'Monthly',
-                  value: '\$${totalMonthly.toStringAsFixed(0)}',
+                  value: prefs.formatAmount(totalMonthly),
                   icon: Icons.payments_outlined,
                   themeColors: themeColors,
                 ),
@@ -356,7 +359,7 @@ class _CompactStatsGrid extends StatelessWidget {
               Expanded(
                 child: _StatItem(
                   label: 'Yearly',
-                  value: '\$${(totalMonthly * 12).toStringAsFixed(0)}',
+                  value: prefs.formatAmount(totalMonthly * 12),
                   icon: Icons.calendar_today_outlined,
                   themeColors: themeColors,
                 ),
@@ -422,6 +425,7 @@ class _SpendingOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final nextRenewal = _getNextRenewal();
     final mostExpensive = _getMostExpensive();
+    final prefs = context.watch<SubscriptionPreferencesProvider>(); // ADDED
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -434,7 +438,7 @@ class _SpendingOverview extends StatelessWidget {
                 title: 'Next Renewal',
                 subtitle:
                     '${nextRenewal.name} • ${_getDaysUntil(nextRenewal.nextBillingDate)} days',
-                amount: '\$${nextRenewal.amount.toStringAsFixed(2)}',
+                amount: prefs.formatAmount(nextRenewal.amount), // FIXED
                 themeColors: themeColors,
                 gradientColors: [
                   themeColors.secondary.withValues(alpha: 0.2),
@@ -448,7 +452,7 @@ class _SpendingOverview extends StatelessWidget {
                 icon: Icons.trending_up,
                 title: 'Highest Cost',
                 subtitle: mostExpensive.name,
-                amount: '\$${mostExpensive.amount.toStringAsFixed(2)}/mo',
+                amount: '${prefs.formatAmount(mostExpensive.amount)}/mo', // FIXED
                 themeColors: themeColors,
                 gradientColors: [
                   themeColors.primary.withValues(alpha: 0.2),

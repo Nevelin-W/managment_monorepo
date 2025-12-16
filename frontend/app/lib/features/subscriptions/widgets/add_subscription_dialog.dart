@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../features/subscriptions/models/subscription_model.dart';
 import '../../../features/subscriptions/providers/subscription_provider.dart';
+import '../../../features/subscriptions/providers/subscription_preferences_provider.dart'; // ADD THIS
 import '../../../core/widgets/common/dialog_wrapper.dart';
 import '../../../core/widgets/common/dialog_header.dart';
 import '../../../core/widgets/common/dialog_actions.dart';
@@ -111,6 +112,7 @@ class _AddSubscriptionDialogState extends State<AddSubscriptionDialog> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final prefs = context.watch<SubscriptionPreferencesProvider>(); // ADD THIS
 
     return DialogWrapper(
       header: const DialogHeader(
@@ -133,8 +135,8 @@ class _AddSubscriptionDialogState extends State<AddSubscriptionDialog> {
             const SizedBox(height: 20),
             FormTextField(
               controller: _amountController,
-              label: 'Amount',
-              hint: '0.00',
+              label: 'Amount (${prefs.currency})', // UPDATED - Show currency
+              hint: prefs.showCents ? '0.00' : '0', // UPDATED - Adjust hint
               icon: Icons.attach_money,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: SubscriptionFormFields.amountFormatters,

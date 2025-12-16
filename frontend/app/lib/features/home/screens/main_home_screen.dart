@@ -68,16 +68,16 @@ class _UserAppBar extends StatelessWidget {
                         'Welcome back,',
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.grey[400],
+                          color: themeColors.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         userName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: themeColors.onSurface,
                           letterSpacing: -0.5,
                         ),
                       ),
@@ -96,7 +96,7 @@ class _UserAppBar extends StatelessWidget {
               'Choose an app to get started',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey[400],
+                color: themeColors.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -144,7 +144,7 @@ class _ProfileButton extends StatelessWidget {
             ],
           ),
           border: Border.all(
-            color: Colors.white.withValues(alpha: 0.2),
+            color: themeColors.onSurface.withValues(alpha: 0.2),
             width: 2,
           ),
         ),
@@ -183,7 +183,7 @@ class _ProfileBottomSheet extends StatelessWidget {
         color: themeColors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         border: Border.all(
-          color: Colors.white.withValues(alpha: 0.1),
+          color: themeColors.onSurface.withValues(alpha: 0.1),
         ),
       ),
       child: Column(
@@ -194,7 +194,7 @@ class _ProfileBottomSheet extends StatelessWidget {
             width: 40,
             height: 4,
             decoration: BoxDecoration(
-              color: Colors.grey[600],
+              color: themeColors.onSurface.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -234,10 +234,10 @@ class _ProfileBottomSheet extends StatelessWidget {
                     children: [
                       Text(
                         userName,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: themeColors.onSurface,
                         ),
                       ),
                       const SizedBox(height: 2),
@@ -245,7 +245,7 @@ class _ProfileBottomSheet extends StatelessWidget {
                         userEmail,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Colors.grey[400],
+                          color: themeColors.onSurface.withValues(alpha: 0.6),
                         ),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -292,7 +292,10 @@ class _ProfileBottomSheet extends StatelessWidget {
             },
             themeColors: themeColors,
           ),
-          const Divider(height: 32),
+          Divider(
+            height: 32,
+            color: themeColors.onSurface.withValues(alpha: 0.1),
+          ),
           _ProfileMenuItem(
             icon: Icons.logout,
             title: 'Sign Out',
@@ -338,7 +341,9 @@ class _ProfileMenuItem extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: isDestructive ? themeColors.error : Colors.grey[400],
+              color: isDestructive 
+                  ? themeColors.error 
+                  : themeColors.onSurface.withValues(alpha: 0.6),
               size: 22,
             ),
             const SizedBox(width: 16),
@@ -346,14 +351,14 @@ class _ProfileMenuItem extends StatelessWidget {
               title,
               style: TextStyle(
                 fontSize: 16,
-                color: isDestructive ? themeColors.error : Colors.white,
+                color: isDestructive ? themeColors.error : themeColors.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
             const Spacer(),
             Icon(
               Icons.chevron_right,
-              color: Colors.grey[600],
+              color: themeColors.onSurface.withValues(alpha: 0.3),
               size: 20,
             ),
           ],
@@ -386,7 +391,7 @@ class _QuickStats extends StatelessWidget {
             ),
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
+              color: themeColors.onSurface.withValues(alpha: 0.1),
             ),
           ),
           child: Row(
@@ -401,7 +406,7 @@ class _QuickStats extends StatelessWidget {
               Container(
                 width: 1,
                 height: 40,
-                color: Colors.white.withValues(alpha: 0.1),
+                color: themeColors.onSurface.withValues(alpha: 0.1),
               ),
               _QuickStatItem(
                 icon: Icons.credit_card,
@@ -412,7 +417,7 @@ class _QuickStats extends StatelessWidget {
               Container(
                 width: 1,
                 height: 40,
-                color: Colors.white.withValues(alpha: 0.1),
+                color: themeColors.onSurface.withValues(alpha: 0.1),
               ),
               _QuickStatItem(
                 icon: Icons.check_circle_outline,
@@ -449,10 +454,10 @@ class _QuickStatItem extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: themeColors.onSurface,
           ),
         ),
         const SizedBox(height: 4),
@@ -460,7 +465,7 @@ class _QuickStatItem extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[400],
+            color: themeColors.onSurface.withValues(alpha: 0.6),
           ),
         ),
       ],
@@ -560,6 +565,10 @@ class _AppModuleCardState extends State<_AppModuleCard> {
 
   @override
   Widget build(BuildContext context) {
+    // Create disabled colors from onSurface
+    final disabledColor = widget.themeColors.onSurface.withValues(alpha: 0.3);
+    final disabledTextColor = widget.themeColors.onSurface.withValues(alpha: 0.4);
+
     return MouseRegion(
       onEnter: widget.isEnabled ? (_) => setState(() => _isHovered = true) : null,
       onExit: widget.isEnabled ? (_) => setState(() => _isHovered = false) : null,
@@ -586,7 +595,9 @@ class _AppModuleCardState extends State<_AppModuleCard> {
             border: Border.all(
               color: widget.isEnabled && _isHovered
                   ? widget.gradientColors[0].withValues(alpha: 0.4)
-                  : Colors.white.withValues(alpha: widget.isEnabled ? 0.1 : 0.05),
+                  : widget.themeColors.onSurface.withValues(
+                      alpha: widget.isEnabled ? 0.1 : 0.05,
+                    ),
               width: widget.isEnabled && _isHovered ? 2 : 1,
             ),
           ),
@@ -609,7 +620,7 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                 Positioned.fill(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: widget.themeColors.surface.withValues(alpha: 0.5),
                       borderRadius: BorderRadius.circular(24),
                     ),
                   ),
@@ -629,10 +640,7 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                             gradient: LinearGradient(
                               colors: widget.isEnabled
                                   ? widget.gradientColors
-                                  : [
-                                      Colors.grey[700]!,
-                                      Colors.grey[800]!,
-                                    ],
+                                  : [disabledColor, disabledColor],
                             ),
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: widget.isEnabled
@@ -648,7 +656,9 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                           ),
                           child: Icon(
                             widget.icon,
-                            color: widget.isEnabled ? Colors.white : Colors.grey[600],
+                            color: widget.isEnabled 
+                                ? widget.themeColors.onPrimary 
+                                : disabledTextColor,
                             size: 28,
                           ),
                         ),
@@ -660,12 +670,12 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                           decoration: BoxDecoration(
                             color: widget.isEnabled
                                 ? widget.gradientColors[0].withValues(alpha: 0.2)
-                                : Colors.grey[800]!.withValues(alpha: 0.3),
+                                : disabledColor.withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: widget.isEnabled
                                   ? widget.gradientColors[0].withValues(alpha: 0.3)
-                                  : Colors.grey[700]!.withValues(alpha: 0.3),
+                                  : disabledColor.withValues(alpha: 0.3),
                             ),
                           ),
                           child: Text(
@@ -673,7 +683,7 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                             style: TextStyle(
                               color: widget.isEnabled
                                   ? widget.gradientColors[0]
-                                  : Colors.grey[600],
+                                  : disabledTextColor,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -687,7 +697,9 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
-                        color: widget.isEnabled ? Colors.white : Colors.grey[600],
+                        color: widget.isEnabled 
+                            ? widget.themeColors.onSurface 
+                            : disabledTextColor,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -695,7 +707,9 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                       widget.description,
                       style: TextStyle(
                         fontSize: 14,
-                        color: widget.isEnabled ? Colors.grey[400] : Colors.grey[700],
+                        color: widget.isEnabled 
+                            ? widget.themeColors.onSurface.withValues(alpha: 0.6)
+                            : disabledTextColor.withValues(alpha: 0.6),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -706,7 +720,7 @@ class _AppModuleCardState extends State<_AppModuleCard> {
                           style: TextStyle(
                             color: widget.isEnabled
                                 ? widget.gradientColors[0]
-                                : Colors.grey[600],
+                                : disabledTextColor,
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),

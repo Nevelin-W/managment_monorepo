@@ -17,7 +17,8 @@ import '../../features/settings/screens/settings_screen.dart';
 
 // Subscription app screens
 import '../../../features/subscriptions/screens/subscriptions_home_screen.dart';
-import '../../features/subscriptions/screens/subscriptions_list_screen.dart';
+import '../../../features/subscriptions/screens/subscriptions_list_screen.dart';
+import '../../features/subscriptions/screens/subscription_settings_screen.dart';
 
 /// Route names as constants for type-safe navigation
 abstract class AppRoutes {
@@ -34,6 +35,7 @@ abstract class AppRoutes {
   // Subscription app routes
   static const subscriptions = '/subscriptions';
   static const subscriptionsList = '/subscriptions/list';
+    static const subscriptionSettings = '/subscriptions/settings';
   
   // Calendar app routes (placeholder)
   static const calendar = '/calendar';
@@ -181,6 +183,14 @@ class AppRouter {
               name: 'subscriptionsList',
               pageBuilder: (context, state) => _buildPageTransition(
                 child: const SubscriptionsListScreen(),
+                state: state,
+              ),
+            ),
+            GoRoute(
+              path: 'settings',
+              name: 'subscriptionSettings',
+              pageBuilder: (context, state) => _buildPageTransition(
+                child: const SubscriptionSettingsScreen(),
                 state: state,
               ),
             ),
@@ -355,6 +365,7 @@ extension AppRouterExtension on BuildContext {
   // Subscription app
   void goToSubscriptions() => go(AppRoutes.subscriptions);
   void goToSubscriptionsList() => go(AppRoutes.subscriptionsList);
+  void goToSubscriptionSettings() => go(AppRoutes.subscriptionSettings);
   
   // Calendar app
   void goToCalendar() => go(AppRoutes.calendar);
