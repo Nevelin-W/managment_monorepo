@@ -1,53 +1,51 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, UpdateCommand } = require("@aws-sdk/lib-dynamodb");
+const { success, error, logRequest, logResponse, logger, parseBody, extractClaims } = require("../../shared/response");
 
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION }));
 
+const VALID_BILLING_CYCLES = ['monthly', 'yearly', 'weekly'];
+
 exports.handler = async (event) => {
-  console.log('Update subscription request:', JSON.stringify(event, null, 2));
+  logRequest('Update subscription', event);
+  const startTime = Date.now();
   
   try {
-    const userId = event.requestContext.authorizer.claims.sub;
-    const subscriptionId = event.pathParameters.id;
+    const { userId } = extractClaims(event);
+    const subscriptionId = event.pathParameters?.id;
     
-    if (!userId || !subscriptionId) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Missing required parameters' }),
-      };
+    if (!subscriptionId) {
+      return error(400, 'Subscription ID is required');
     }
 
-    const body = JSON.parse(event.body);
+    const body = parseBody(event);
     const { name, amount, billing_cycle, next_billing_date, category, description, is_active } = body;
 
-    // First, verify the subscription belongs to the user
-    const getCommand = new GetCommand({
-      TableName: process.env.SUBSCRIPTIONS_TABLE,
-      Key: {
-        id: subscriptionId,
-        user_id: userId,
-      },
-    });
+    // Validate amount if provided
+    if (amount !== undefined) {
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount) || parsedAmount < 0) {
+        return error(400, 'Amount must be a non-negative number');
+      }
+    }
 
-    const existingItem = await dynamoClient.send(getCommand);
+    // Validate billing cycle if provided
+    if (billing_cycle !== undefined && !VALID_BILLING_CYCLES.includes(billing_cycle)) {
+      return error(400, `Invalid billing_cycle. Must be one of: ${VALID_BILLING_CYCLES.join(', ')}`);
+    }
+
+    // Verify the subscription belongs to the user
+    const existingItem = await dynamoClient.send(new GetCommand({
+      TableName: process.env.SUBSCRIPTIONS_TABLE,
+      Key: { id: subscriptionId, user_id: userId },
+    }));
     
     if (!existingItem.Item) {
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Subscription not found' }),
-      };
+      return error(404, 'Subscription not found');
     }
 
     // Build update expression dynamically
-    const updateExpressions = [];
+    const updateExpressions = ['updated_at = :timestamp'];
     const expressionAttributeNames = {};
     const expressionAttributeValues = {
       ':timestamp': new Date().toISOString(),
@@ -56,7 +54,7 @@ exports.handler = async (event) => {
     if (name !== undefined) {
       updateExpressions.push('#name = :name');
       expressionAttributeNames['#name'] = 'name';
-      expressionAttributeValues[':name'] = name;
+      expressionAttributeValues[':name'] = name.trim();
     }
     if (amount !== undefined) {
       updateExpressions.push('amount = :amount');
@@ -83,45 +81,23 @@ exports.handler = async (event) => {
       expressionAttributeValues[':isActive'] = is_active;
     }
 
-    // Always update the timestamp
-    updateExpressions.push('updated_at = :timestamp');
-
-    const updateCommand = new UpdateCommand({
+    const result = await dynamoClient.send(new UpdateCommand({
       TableName: process.env.SUBSCRIPTIONS_TABLE,
-      Key: {
-        id: subscriptionId,
-        user_id: userId,
-      },
+      Key: { id: subscriptionId, user_id: userId },
       UpdateExpression: `SET ${updateExpressions.join(', ')}`,
       ExpressionAttributeNames: Object.keys(expressionAttributeNames).length > 0 ? expressionAttributeNames : undefined,
       ExpressionAttributeValues: expressionAttributeValues,
       ReturnValues: 'ALL_NEW',
-    });
+    }));
 
-    const result = await dynamoClient.send(updateCommand);
+    const resp = success(200, result.Attributes);
+    logResponse('Update subscription', event, resp, startTime);
+    return resp;
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify(result.Attributes),
-    };
-
-  } catch (error) {
-    console.error('Update subscription error:', error);
-    
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message 
-      }),
-    };
+  } catch (err) {
+    logger.error('Update subscription failed', { error: err.name, message: err.message, stack: err.stack });
+    const resp = err.statusCode ? error(err.statusCode, err.message) : error(500, 'Internal server error', err.message);
+    logResponse('Update subscription', event, resp, startTime);
+    return resp;
   }
 };

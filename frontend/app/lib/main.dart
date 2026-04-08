@@ -4,7 +4,7 @@ import 'core/config/theme.dart';
 import 'core/router/app_router.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/subscriptions/providers/subscription_provider.dart';
-import 'features/subscriptions/providers/subscription_preferences_provider.dart'; // ADD THIS
+import 'features/subscriptions/providers/subscription_preferences_provider.dart';
 import 'features/home/providers/theme_provider.dart';
 import 'core/config/app_config.dart';
 import 'core/utils/app_logger.dart';
@@ -68,7 +68,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider()),
-        ChangeNotifierProvider(create: (_) => SubscriptionPreferencesProvider()), // ADD THIS
+        ChangeNotifierProvider(create: (_) => SubscriptionPreferencesProvider()),
       ],
       child: Consumer2<ThemeProvider, AuthProvider>(
         builder: (context, themeProvider, authProvider, _) {

@@ -1,4 +1,5 @@
-/// Application-wide constants for consistent spacing, sizing, and styling
+/// Application-wide constants for consistent spacing, sizing, and styling.
+library;
 
 class AppSpacing {
   // Padding values

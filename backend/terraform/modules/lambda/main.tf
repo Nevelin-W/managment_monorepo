@@ -20,6 +20,12 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# X-Ray tracing policy
+resource "aws_iam_role_policy_attachment" "lambda_xray" {
+  role       = aws_iam_role.lambda_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AWSXRayDaemonWriteAccess"
+}
+
 # DynamoDB access policy
 resource "aws_iam_role_policy" "lambda_dynamodb" {
   name = "${var.project_name}-lambda-dynamodb-${var.environment}"
@@ -41,7 +47,9 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
         "arn:aws:dynamodb:*:*:table/${var.users_table_name}",
         "arn:aws:dynamodb:*:*:table/${var.users_table_name}/*",
         "arn:aws:dynamodb:*:*:table/${var.subscriptions_table}",
-        "arn:aws:dynamodb:*:*:table/${var.subscriptions_table}/*"
+        "arn:aws:dynamodb:*:*:table/${var.subscriptions_table}/*",
+        "arn:aws:dynamodb:*:*:table/${var.subscriptions_changes_table}",
+        "arn:aws:dynamodb:*:*:table/${var.subscriptions_changes_table}/*"
       ]
     }]
   })
@@ -66,7 +74,7 @@ resource "aws_iam_role_policy" "lambda_s3" {
   })
 }
 
-# Cognito access policy
+# Cognito access policy - scoped to specific user pool
 resource "aws_iam_role_policy" "lambda_cognito" {
   name = "${var.project_name}-lambda-cognito-${var.environment}"
   role = aws_iam_role.lambda_role.id
@@ -83,9 +91,8 @@ resource "aws_iam_role_policy" "lambda_cognito" {
           "cognito-idp:AdminGetUser",
           "cognito-idp:AdminConfirmSignUp",
           "cognito-idp:AdminUpdateUserAttributes"
-
         ]
-        Resource = "*"
+        Resource = "arn:aws:cognito-idp:*:*:userpool/${var.user_pool_id}"
       }
     ]
   })
@@ -104,13 +111,18 @@ resource "aws_lambda_layer_version" "dependencies" {
 
 # Auth - Login Lambda
 resource "aws_lambda_function" "auth_login" {
-  filename      = "${path.module}/../../lambda_functions/auth/login/function.zip"
-  function_name = "${var.project_name}-auth-login-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/auth/login/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/auth/login/function.zip")
+  function_name    = "${var.project_name}-auth-login-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -126,13 +138,18 @@ resource "aws_lambda_function" "auth_login" {
 
 # Auth - Signup Lambda
 resource "aws_lambda_function" "auth_signup" {
-  filename      = "${path.module}/../../lambda_functions/auth/signup/function.zip"
-  function_name = "${var.project_name}-auth-signup-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/auth/signup/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/auth/signup/function.zip")
+  function_name    = "${var.project_name}-auth-signup-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -148,13 +165,18 @@ resource "aws_lambda_function" "auth_signup" {
 
 # Auth - Get Me Lambda
 resource "aws_lambda_function" "auth_me" {
-  filename      = "${path.module}/../../lambda_functions/auth/me/function.zip"
-  function_name = "${var.project_name}-auth-me-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/auth/me/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/auth/me/function.zip")
+  function_name    = "${var.project_name}-auth-me-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 10
   memory_size   = 128
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -177,6 +199,10 @@ resource "aws_lambda_function" "auth_confirm" {
   timeout       = 30
   memory_size   = 256
 
+  tracing_config {
+    mode = "Active"
+  }
+
   environment {
     variables = {
       USER_POOL_ID        = var.user_pool_id
@@ -191,13 +217,18 @@ resource "aws_lambda_function" "auth_confirm" {
 
 # Auth - Resend Code Lambda
 resource "aws_lambda_function" "auth_resend_code" {
-  filename      = "${path.module}/../../lambda_functions/auth/resend_code/function.zip"
-  function_name = "${var.project_name}-auth-resend-code-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/auth/resend_code/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/auth/resend_code/function.zip")
+  function_name    = "${var.project_name}-auth-resend-code-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 128
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -211,13 +242,18 @@ resource "aws_lambda_function" "auth_resend_code" {
 
 # Auth - Change Password Lambda
 resource "aws_lambda_function" "auth_change_password" {
-  filename      = "${path.module}/../../lambda_functions/auth/change_password/function.zip"
-  function_name = "${var.project_name}-auth-change-password-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/auth/change_password/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/auth/change_password/function.zip")
+  function_name    = "${var.project_name}-auth-change-password-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -231,13 +267,18 @@ resource "aws_lambda_function" "auth_change_password" {
 }
 
 resource "aws_lambda_function" "auth_update_profile" {
-  filename      = "${path.module}/../../lambda_functions/auth/update_profile/function.zip"
-  function_name = "${var.project_name}-auth-update-profile-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/auth/update_profile/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/auth/update_profile/function.zip")
+  function_name    = "${var.project_name}-auth-update-profile-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -274,13 +315,18 @@ resource "aws_cloudwatch_log_group" "lambda_logs" {
 
 # Subscriptions - List Lambda
 resource "aws_lambda_function" "subs_list" {
-  filename      = "${path.module}/../../lambda_functions/subscriptions/list/function.zip"
-  function_name = "${var.project_name}-subs-list-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/subscriptions/list/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/subscriptions/list/function.zip")
+  function_name    = "${var.project_name}-subs-list-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 10
   memory_size   = 128
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -294,13 +340,18 @@ resource "aws_lambda_function" "subs_list" {
 
 # Subscriptions - Create Lambda
 resource "aws_lambda_function" "subs_create" {
-  filename      = "${path.module}/../../lambda_functions/subscriptions/create/function.zip"
-  function_name = "${var.project_name}-subs-create-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/subscriptions/create/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/subscriptions/create/function.zip")
+  function_name    = "${var.project_name}-subs-create-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -314,13 +365,18 @@ resource "aws_lambda_function" "subs_create" {
 
 # Subscriptions - Update Lambda
 resource "aws_lambda_function" "subs_update" {
-  filename      = "${path.module}/../../lambda_functions/subscriptions/update/function.zip"
-  function_name = "${var.project_name}-subs-update-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/subscriptions/update/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/subscriptions/update/function.zip")
+  function_name    = "${var.project_name}-subs-update-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 30
   memory_size   = 256
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -334,13 +390,18 @@ resource "aws_lambda_function" "subs_update" {
 
 # Subscriptions - Delete Lambda
 resource "aws_lambda_function" "subs_delete" {
-  filename      = "${path.module}/../../lambda_functions/subscriptions/delete/function.zip"
-  function_name = "${var.project_name}-subs-delete-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/subscriptions/delete/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/subscriptions/delete/function.zip")
+  function_name    = "${var.project_name}-subs-delete-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 10
   memory_size   = 128
+
+  tracing_config {
+    mode = "Active"
+  }
 
   environment {
     variables = {
@@ -354,19 +415,25 @@ resource "aws_lambda_function" "subs_delete" {
 
 # Email Processor Lambda
 resource "aws_lambda_function" "email_processor" {
-  filename      = "${path.module}/../../lambda_functions/email_processor/function.zip"
-  function_name = "${var.project_name}-email-processor-${var.environment}"
+  filename         = "${path.module}/../../lambda_functions/email_processor/function.zip"
+  source_code_hash = filebase64sha256("${path.module}/../../lambda_functions/email_processor/function.zip")
+  function_name    = "${var.project_name}-email-processor-${var.environment}"
   role          = aws_iam_role.lambda_role.arn
   handler       = "index.handler"
   runtime       = "nodejs20.x"
   timeout       = 300  # 5 minutes for email processing
   memory_size   = 512
 
+  tracing_config {
+    mode = "Active"
+  }
+
   environment {
     variables = {
-      SUBSCRIPTIONS_TABLE = var.subscriptions_table
-      DOCUMENTS_BUCKET    = var.documents_bucket
-      ENVIRONMENT         = var.environment
+      SUBSCRIPTIONS_TABLE         = var.subscriptions_table
+      SUBSCRIPTIONS_CHANGES_TABLE = var.subscriptions_changes_table
+      DOCUMENTS_BUCKET            = var.documents_bucket
+      ENVIRONMENT                 = var.environment
     }
   }
 

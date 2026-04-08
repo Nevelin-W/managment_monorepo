@@ -397,7 +397,6 @@ class SubscriptionSettingsScreen extends StatelessWidget {
       {'value': 'upcoming', 'label': 'Next Billing Date'},
       {'value': 'expensive', 'label': 'Most Expensive'},
       {'value': 'recent', 'label': 'Recently Added'},
-      {'value': 'alphabetical', 'label': 'Alphabetical'},
     ];
 
     return SliverToBoxAdapter(

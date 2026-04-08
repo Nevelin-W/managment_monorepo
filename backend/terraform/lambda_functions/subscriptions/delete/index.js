@@ -1,84 +1,44 @@
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, GetCommand, DeleteCommand } = require("@aws-sdk/lib-dynamodb");
+const { success, error, logRequest, logResponse, logger, extractClaims } = require("../../shared/response");
 
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION }));
 
 exports.handler = async (event) => {
-  console.log('Delete subscription request:', JSON.stringify(event, null, 2));
+  logRequest('Delete subscription', event);
+  const startTime = Date.now();
   
   try {
-    const userId = event.requestContext.authorizer.claims.sub;
-    const subscriptionId = event.pathParameters.id;
+    const { userId } = extractClaims(event);
+    const subscriptionId = event.pathParameters?.id;
     
-    if (!userId || !subscriptionId) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Missing required parameters' }),
-      };
+    if (!subscriptionId) {
+      return error(400, 'Subscription ID is required');
     }
 
-    // First, verify the subscription exists and belongs to the user
-    const getCommand = new GetCommand({
+    // Verify the subscription exists and belongs to the user
+    const existingItem = await dynamoClient.send(new GetCommand({
       TableName: process.env.SUBSCRIPTIONS_TABLE,
-      Key: {
-        id: subscriptionId,
-        user_id: userId,
-      },
-    });
-
-    const existingItem = await dynamoClient.send(getCommand);
+      Key: { id: subscriptionId, user_id: userId },
+    }));
     
     if (!existingItem.Item) {
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Subscription not found' }),
-      };
+      return error(404, 'Subscription not found');
     }
 
-    // Delete the subscription
-    const deleteCommand = new DeleteCommand({
+    await dynamoClient.send(new DeleteCommand({
       TableName: process.env.SUBSCRIPTIONS_TABLE,
-      Key: {
-        id: subscriptionId,
-        user_id: userId,
-      },
-    });
+      Key: { id: subscriptionId, user_id: userId },
+    }));
 
-    await dynamoClient.send(deleteCommand);
+    const resp = success(200, { message: 'Subscription deleted successfully', id: subscriptionId });
+    logResponse('Delete subscription', event, resp, startTime);
+    return resp;
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        message: 'Subscription deleted successfully',
-        id: subscriptionId,
-      }),
-    };
-
-  } catch (error) {
-    console.error('Delete subscription error:', error);
-    
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message 
-      }),
-    };
+  } catch (err) {
+    logger.error('Delete subscription failed', { error: err.name, message: err.message, stack: err.stack });
+    const resp = err.statusCode ? error(err.statusCode, err.message) : error(500, 'Internal server error', err.message);
+    logResponse('Delete subscription', event, resp, startTime);
+    return resp;
   }
 };

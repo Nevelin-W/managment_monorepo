@@ -1,210 +1,87 @@
 const { CognitoIdentityProviderClient, ChangePasswordCommand } = require("@aws-sdk/client-cognito-identity-provider");
+const { success, error, logRequest, logResponse, logger, parseBody, extractClaims } = require("../../shared/response");
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
 
 exports.handler = async (event) => {
-  console.log('Change password request:', JSON.stringify(event, null, 2));
+  logRequest('Change password request', event);
+  const startTime = Date.now();
   
   try {
-    // Extract user info from Cognito authorizer context
-    const claims = event.requestContext.authorizer.claims;
-    const userId = claims.sub;
-    const email = claims.email;
-    
-    if (!userId || !email) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Unauthorized' }),
-      };
-    }
-
-    // Parse request body
-    const body = JSON.parse(event.body || '{}');
+    const { email } = extractClaims(event);
+    const body = parseBody(event);
     const { oldPassword, newPassword } = body;
 
     // Validate input
     if (!oldPassword || typeof oldPassword !== 'string') {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Current password is required' }),
-      };
+      return error(400, 'Current password is required');
     }
-
     if (!newPassword || typeof newPassword !== 'string') {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'New password is required' }),
-      };
+      return error(400, 'New password is required');
     }
-
-    // Validate new password strength
     if (newPassword.length < 8) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ 
-          error: 'New password must be at least 8 characters long' 
-        }),
-      };
+      return error(400, 'New password must be at least 8 characters long');
     }
 
-    // Check password requirements
     const hasUpperCase = /[A-Z]/.test(newPassword);
     const hasLowerCase = /[a-z]/.test(newPassword);
     const hasNumber = /[0-9]/.test(newPassword);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(newPassword);
 
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSpecialChar) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ 
-          error: 'Password must contain uppercase, lowercase, number, and special character' 
-        }),
-      };
+      return error(400, 'Password must contain uppercase, lowercase, number, and special character');
     }
 
-    // Prevent using the same password
     if (oldPassword === newPassword) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ 
-          error: 'New password must be different from current password' 
-        }),
-      };
+      return error(400, 'New password must be different from current password');
     }
 
     // Extract access token from custom header or Authorization header
-    let accessToken;
-
-    // First try custom header (X-Access-Token)
-    const customHeader = event.headers?.['X-Access-Token'] || event.headers?.['x-access-token'];
-    if (customHeader) {
-      console.log('Using access token from X-Access-Token header');
-      accessToken = customHeader;
-    } else {
-      // Fallback to Authorization header
-      console.log('No X-Access-Token header found, using Authorization header');
-      const authHeader = event.headers?.Authorization || event.headers?.authorization;
-      if (!authHeader) {
-        return {
-          statusCode: 401,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: JSON.stringify({ error: 'Missing authorization token' }),
-        };
-      }
-      // Remove 'Bearer ' prefix if present
-      accessToken = authHeader.replace(/^Bearer\s+/i, '');
-    }
+    const accessToken = event.headers?.['X-Access-Token'] 
+      || event.headers?.['x-access-token']
+      || (event.headers?.Authorization || event.headers?.authorization || '').replace(/^Bearer\s+/i, '');
 
     if (!accessToken) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Access token is required' }),
-      };
+      return error(401, 'Access token is required');
     }
-
-    console.log('Attempting password change for user:', email);
 
     // Change password using Cognito
-    const command = new ChangePasswordCommand({
-      AccessToken: accessToken,
-      PreviousPassword: oldPassword,
-      ProposedPassword: newPassword,
-    });
-
     try {
-      await cognitoClient.send(command);
-      console.log('Password changed successfully for user:', email);
+      await cognitoClient.send(new ChangePasswordCommand({
+        AccessToken: accessToken,
+        PreviousPassword: oldPassword,
+        ProposedPassword: newPassword,
+      }));
+      logger.info('Password changed successfully', { email });
     } catch (cognitoError) {
-      console.error('Cognito password change error:', cognitoError);
+      logger.error('Cognito password change error', { error: cognitoError.name, message: cognitoError.message });
       
-      // Handle specific Cognito errors
-      let errorMessage = 'Failed to change password';
-      let statusCode = 400;
-      
-      if (cognitoError.name === 'NotAuthorizedException') {
-        errorMessage = 'Current password is incorrect';
-        statusCode = 401;
-      } else if (cognitoError.name === 'InvalidPasswordException') {
-        errorMessage = 'New password does not meet requirements';
-      } else if (cognitoError.name === 'LimitExceededException') {
-        errorMessage = 'Too many attempts. Please try again later';
-        statusCode = 429;
-      } else if (cognitoError.name === 'InvalidParameterException') {
-        errorMessage = 'Invalid password format';
-      } else if (cognitoError.name === 'UserNotFoundException') {
-        errorMessage = 'User not found';
-        statusCode = 404;
-      } else if (cognitoError.name === 'PasswordResetRequiredException') {
-        errorMessage = 'Password reset is required';
-        statusCode = 403;
-      }
-      
-      return {
-        statusCode: statusCode,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: errorMessage }),
+      const errorMap = {
+        'NotAuthorizedException': [401, 'Current password is incorrect'],
+        'InvalidPasswordException': [400, 'New password does not meet requirements'],
+        'LimitExceededException': [429, 'Too many attempts. Please try again later'],
+        'InvalidParameterException': [400, 'Invalid password format'],
+        'UserNotFoundException': [404, 'User not found'],
+        'PasswordResetRequiredException': [403, 'Password reset is required'],
       };
+      
+      const [status, msg] = errorMap[cognitoError.name] || [400, 'Failed to change password'];
+      const resp = error(status, msg);
+      logResponse('Change password', event, resp, startTime);
+      return resp;
     }
 
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        message: 'Password changed successfully',
-        success: true,
-      }),
-    };
+    const resp = success(200, {
+      message: 'Password changed successfully',
+      success: true,
+    });
+    logResponse('Change password', event, resp, startTime);
+    return resp;
 
-  } catch (error) {
-    console.error('Change password error:', error);
-    
-    return {
-      statusCode: 500,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        error: 'Internal server error',
-        message: error.message 
-      }),
-    };
+  } catch (err) {
+    logger.error('Change password failed', { error: err.name, message: err.message, stack: err.stack });
+    const resp = err.statusCode ? error(err.statusCode, err.message) : error(500, 'Internal server error', err.message);
+    logResponse('Change password', event, resp, startTime);
+    return resp;
   }
 };

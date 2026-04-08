@@ -8,6 +8,11 @@ output "api_id" {
   value       = aws_api_gateway_rest_api.main.id
 }
 
+output "api_name" {
+  description = "API Gateway REST API name"
+  value       = aws_api_gateway_rest_api.main.name
+}
+
 output "api_stage" {
   description = "API Gateway stage name"
   value       = aws_api_gateway_stage.main.stage_name

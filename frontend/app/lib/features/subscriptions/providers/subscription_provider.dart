@@ -21,8 +21,17 @@ class SubscriptionProvider with ChangeNotifier {
 
   double get totalMonthlySpend {
     return _subscriptions
-        .where((s) => s.billingCycle == BillingCycle.monthly)
-        .fold(0, (sum, sub) => sum + sub.amount);
+        .where((s) => s.isActive)
+        .fold(0.0, (sum, sub) {
+      switch (sub.billingCycle) {
+        case BillingCycle.monthly:
+          return sum + sub.amount;
+        case BillingCycle.yearly:
+          return sum + (sub.amount / 12);
+        case BillingCycle.weekly:
+          return sum + (sub.amount * 4.33);
+      }
+    });
   }
 
   Future<void> fetchSubscriptions() async {
@@ -51,12 +60,9 @@ class SubscriptionProvider with ChangeNotifier {
 
     try {
       final newSub = await _service.createSubscription(subscription);
-      _subscriptions.add(newSub);
-      notifyListeners();
-
-      // Ensure state sync with server
-      await fetchSubscriptions();
+      _subscriptions = [..._subscriptions, newSub];
       _log.info('Subscription added successfully', {'id': newSub.id});
+      notifyListeners();
     } catch (e, stackTrace) {
       _log.error('Failed to add subscription in provider', error: e, stackTrace: stackTrace);
       _error = e.toString();

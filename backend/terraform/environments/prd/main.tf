@@ -48,37 +48,47 @@ module "storage" {
 # Lambda Functions Module
 module "lambda" {
   source = "../../modules/lambda"
-  
-  environment         = var.environment
-  project_name        = var.project_name
-  users_table_name    = module.database.users_table_name
-  subscriptions_table = module.database.subscriptions_table_name
-  documents_bucket    = module.storage.documents_bucket_name
-  user_pool_id        = module.auth.user_pool_id
-  user_pool_client_id = module.auth.user_pool_client_id
+
+  environment                 = var.environment
+  project_name                = var.project_name
+  users_table_name            = module.database.users_table_name
+  subscriptions_table         = module.database.subscriptions_table_name
+  subscriptions_changes_table = module.database.subscription_changes_table_name
+  documents_bucket            = module.storage.documents_bucket_name
+  user_pool_id                = module.auth.user_pool_id
+  user_pool_client_id         = module.auth.user_pool_client_id
 }
 
 # API Gateway Module
 module "api" {
   source = "../../modules/api"
-  
-  environment                = var.environment
-  project_name               = var.project_name
-  lambda_auth_login_arn      = module.lambda.auth_login_invoke_arn
-  lambda_auth_signup_arn     = module.lambda.auth_signup_invoke_arn
-  lambda_auth_me_arn         = module.lambda.auth_me_invoke_arn
-  lambda_subs_list_arn       = module.lambda.subs_list_invoke_arn
-  lambda_subs_create_arn     = module.lambda.subs_create_invoke_arn
-  lambda_subs_update_arn     = module.lambda.subs_update_invoke_arn
-  lambda_subs_delete_arn     = module.lambda.subs_delete_invoke_arn
-  lambda_auth_login_name     = module.lambda.auth_login_name
-  lambda_auth_signup_name    = module.lambda.auth_signup_name
-  lambda_auth_me_name        = module.lambda.auth_me_name
-  lambda_subs_list_name      = module.lambda.subs_list_name
-  lambda_subs_create_name    = module.lambda.subs_create_name
-  lambda_subs_update_name    = module.lambda.subs_update_name
-  lambda_subs_delete_name    = module.lambda.subs_delete_name
-  user_pool_arn              = module.auth.user_pool_arn
+
+  environment                            = var.environment
+  project_name                           = var.project_name
+  lambda_auth_login_arn                  = module.lambda.auth_login_invoke_arn
+  lambda_auth_signup_arn                 = module.lambda.auth_signup_invoke_arn
+  lambda_auth_me_arn                     = module.lambda.auth_me_invoke_arn
+  lambda_subs_list_arn                   = module.lambda.subs_list_invoke_arn
+  lambda_subs_create_arn                 = module.lambda.subs_create_invoke_arn
+  lambda_subs_update_arn                 = module.lambda.subs_update_invoke_arn
+  lambda_subs_delete_arn                 = module.lambda.subs_delete_invoke_arn
+  lambda_auth_login_name                 = module.lambda.auth_login_name
+  lambda_auth_signup_name                = module.lambda.auth_signup_name
+  lambda_auth_me_name                    = module.lambda.auth_me_name
+  lambda_auth_confirm_name               = module.lambda.auth_confirm_name
+  lambda_auth_confirm_invoke_arn         = module.lambda.auth_confirm_invoke_arn
+  lambda_auth_resend_code_name           = module.lambda.auth_resend_code_name
+  lambda_auth_resend_code_invoke_arn     = module.lambda.auth_resend_code_invoke_arn
+  lambda_subs_list_name                  = module.lambda.subs_list_name
+  lambda_subs_create_name                = module.lambda.subs_create_name
+  lambda_subs_update_name                = module.lambda.subs_update_name
+  lambda_subs_delete_name                = module.lambda.subs_delete_name
+  user_pool_arn                          = module.auth.user_pool_arn
+  lambda_auth_update_profile_invoke_arn  = module.lambda.auth_update_profile_function.invoke_arn
+  lambda_auth_update_profile_name        = module.lambda.auth_update_profile_function.function_name
+  lambda_auth_change_password_invoke_arn = module.lambda.auth_change_password_function.invoke_arn
+  lambda_auth_change_password_name       = module.lambda.auth_change_password_function.function_name
+  auth_confirm_source_code_hash          = module.lambda.auth_confirm_source_code_hash
 }
 
 # Email Processing Module
@@ -90,4 +100,30 @@ module "email" {
   email_processor_lambda_arn = module.lambda.email_processor_arn
   documents_bucket_arn       = module.storage.documents_bucket_arn
   email_check_schedule      = var.email_check_schedule
+}
+
+# Observability Dashboard
+module "dashboard" {
+  source = "../../modules/dashboard"
+
+  environment  = var.environment
+  project_name = var.project_name
+  aws_region   = var.aws_region
+  api_name     = module.api.api_name
+  api_stage    = module.api.api_stage
+
+  lambda_function_names = {
+    auth_login           = module.lambda.auth_login_name
+    auth_signup          = module.lambda.auth_signup_name
+    auth_me              = module.lambda.auth_me_name
+    auth_confirm         = module.lambda.auth_confirm_name
+    auth_resend_code     = module.lambda.auth_resend_code_name
+    auth_update_profile  = module.lambda.auth_update_profile_function.function_name
+    auth_change_password = module.lambda.auth_change_password_function.function_name
+    subs_list            = module.lambda.subs_list_name
+    subs_create          = module.lambda.subs_create_name
+    subs_update          = module.lambda.subs_update_name
+    subs_delete          = module.lambda.subs_delete_name
+    email_processor      = module.lambda.email_processor_name
+  }
 }

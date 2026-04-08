@@ -1,177 +1,110 @@
 const { CognitoIdentityProviderClient, InitiateAuthCommand, AdminGetUserCommand } = require("@aws-sdk/client-cognito-identity-provider");
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
-const { DynamoDBDocumentClient, QueryCommand } = require("@aws-sdk/lib-dynamodb");
+const { DynamoDBDocumentClient, GetCommand } = require("@aws-sdk/lib-dynamodb");
+const { success, error, logRequest, logResponse, logger, parseBody, isValidEmail } = require("../../shared/response");
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION }));
 
 exports.handler = async (event) => {
-  console.log('Login request:', JSON.stringify(event, null, 2));
+  logRequest('Login request', event);
+  const startTime = Date.now();
   
   try {
-    const body = JSON.parse(event.body);
+    const body = parseBody(event);
     const { email, password } = body;
 
     if (!email || !password) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Email and password are required' }),
-      };
+      return error(400, 'Email and password are required');
     }
 
-    // First check if user's email is verified in Cognito BEFORE authenticating
+    if (!isValidEmail(email)) {
+      return error(400, 'Invalid email format');
+    }
+
+    // Check if user's email is verified in Cognito BEFORE authenticating
     try {
-      const adminGetUserCommand = new AdminGetUserCommand({
+      const cognitoUser = await cognitoClient.send(new AdminGetUserCommand({
         UserPoolId: process.env.USER_POOL_ID,
         Username: email,
-      });
-
-      const cognitoUser = await cognitoClient.send(adminGetUserCommand);
+      }));
       
-      // Check user status
       if (cognitoUser.UserStatus !== 'CONFIRMED') {
-        return {
-          statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: JSON.stringify({ 
-            error: 'Email not verified',
-            message: 'Please verify your email before logging in. Check your inbox for the verification code.'
-          }),
-        };
+        return error(403, 'Email not verified', 'Please verify your email before logging in.');
       }
 
-      // Double-check email_verified attribute
       const emailVerifiedAttr = cognitoUser.UserAttributes.find(attr => attr.Name === 'email_verified');
-      const isEmailVerified = emailVerifiedAttr && emailVerifiedAttr.Value === 'true';
-
-      if (!isEmailVerified) {
-        return {
-          statusCode: 403,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: JSON.stringify({ 
-            error: 'Email not verified',
-            message: 'Please verify your email before logging in. Check your inbox for the verification code.'
-          }),
-        };
+      if (!emailVerifiedAttr || emailVerifiedAttr.Value !== 'true') {
+        return error(403, 'Email not verified', 'Please verify your email before logging in.');
       }
     } catch (userCheckError) {
       if (userCheckError.name === 'UserNotFoundException') {
-        return {
-          statusCode: 401,
-          headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-          },
-          body: JSON.stringify({ error: 'Incorrect email or password' }),
-        };
+        return error(401, 'Incorrect email or password');
       }
       throw userCheckError;
     }
 
-    // Authenticate with Cognito (only if email is verified)
-    const authCommand = new InitiateAuthCommand({
+    // Authenticate with Cognito
+    const authResponse = await cognitoClient.send(new InitiateAuthCommand({
       AuthFlow: 'USER_PASSWORD_AUTH',
       ClientId: process.env.USER_POOL_CLIENT_ID,
       AuthParameters: {
         USERNAME: email,
         PASSWORD: password,
       },
-    });
-
-    const authResponse = await cognitoClient.send(authCommand);
+    }));
     
     if (!authResponse.AuthenticationResult) {
-      return {
-        statusCode: 401,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Authentication failed' }),
-      };
+      return error(401, 'Authentication failed');
     }
 
     const { AccessToken, IdToken, RefreshToken } = authResponse.AuthenticationResult;
 
-    // Get user details from DynamoDB using email-index
-    const queryCommand = new QueryCommand({
+    // Get user from DynamoDB directly by hash key (email) — no GSI needed
+    const result = await dynamoClient.send(new GetCommand({
       TableName: process.env.USERS_TABLE,
-      IndexName: 'email-index',
-      KeyConditionExpression: 'email = :email',
-      ExpressionAttributeValues: {
-        ':email': email,
-      },
+      Key: { email },
+    }));
+    
+    if (!result.Item) {
+      return error(404, 'User not found');
+    }
+
+    const user = result.Item;
+
+    const resp = success(200, {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      emailVerified: user.emailVerified,
+      token: AccessToken,
+      idToken: IdToken,
+      refreshToken: RefreshToken,
     });
+    logResponse('Login', event, resp, startTime);
+    return resp;
 
-    const queryResult = await dynamoClient.send(queryCommand);
+  } catch (err) {
+    logger.error('Login failed', { error: err.name, message: err.message, stack: err.stack });
     
-    if (!queryResult.Items || queryResult.Items.length === 0) {
-      return {
-        statusCode: 404,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'User not found' }),
-      };
+    if (err.name === 'NotAuthorizedException') {
+      const resp = error(401, 'Incorrect email or password');
+      logResponse('Login', event, resp, startTime);
+      return resp;
     }
-
-    const user = queryResult.Items[0];
-
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        emailVerified: user.emailVerified,
-        token: AccessToken,
-        idToken: IdToken,
-        refreshToken: RefreshToken,
-      }),
-    };
-
-  } catch (error) {
-    console.error('Login error:', error);
-    
-    let statusCode = 500;
-    let errorMessage = 'Internal server error';
-    
-    if (error.name === 'NotAuthorizedException') {
-      statusCode = 401;
-      errorMessage = 'Incorrect email or password';
-    } else if (error.name === 'UserNotConfirmedException') {
-      statusCode = 403;
-      errorMessage = 'Email not verified. Please check your inbox for the verification code.';
-    } else if (error.name === 'UserNotFoundException') {
-      statusCode = 401;
-      errorMessage = 'Incorrect email or password';
+    if (err.name === 'UserNotConfirmedException') {
+      const resp = error(403, 'Email not verified. Please check your inbox for the verification code.');
+      logResponse('Login', event, resp, startTime);
+      return resp;
+    }
+    if (err.name === 'UserNotFoundException') {
+      const resp = error(401, 'Incorrect email or password');
+      logResponse('Login', event, resp, startTime);
+      return resp;
     }
     
-    return {
-      statusCode,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        error: errorMessage,
-        message: error.message 
-      }),
-    };
+    const resp = error(500, 'Internal server error', err.message);
+    logResponse('Login', event, resp, startTime);
+    return resp;
   }
 };

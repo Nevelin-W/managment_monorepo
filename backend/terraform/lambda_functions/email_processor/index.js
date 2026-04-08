@@ -2,6 +2,7 @@ const { S3Client, GetObjectCommand, PutObjectCommand } = require("@aws-sdk/clien
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, QueryCommand, UpdateCommand, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { randomUUID } = require('crypto');
+const { logRequest, logResponse, logger } = require("../shared/response");
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION }));
@@ -16,7 +17,8 @@ const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: pr
  */
 
 exports.handler = async (event) => {
-  console.log('Email processor triggered:', JSON.stringify(event, null, 2));
+  logRequest('Email processor', event);
+  const startTime = Date.now();
   
   try {
     // TODO: Implement Gmail API integration
@@ -26,7 +28,7 @@ exports.handler = async (event) => {
     // 3. Use AI (Claude/GPT) to extract subscription data
     // 4. Update subscription records
     
-    console.log('Email processing would happen here');
+    logger.info('Email processing would happen here');
     
     // Example: Process email content
     const emailData = await processEmailContent(event);
@@ -35,21 +37,25 @@ exports.handler = async (event) => {
       await updateSubscriptionData(emailData);
     }
     
-    return {
+    const resp = {
       statusCode: 200,
       body: JSON.stringify({ message: 'Email processing completed' }),
     };
+    logResponse('Email processor', event, resp, startTime);
+    return resp;
 
-  } catch (error) {
-    console.error('Email processor error:', error);
+  } catch (err) {
+    logger.error('Email processor failed', { error: err.name, message: err.message, stack: err.stack });
     
-    return {
+    const resp = {
       statusCode: 500,
       body: JSON.stringify({ 
         error: 'Email processing failed',
-        message: error.message 
+        message: err.message 
       }),
     };
+    logResponse('Email processor', event, resp, startTime);
+    return resp;
   }
 };
 
@@ -94,7 +100,7 @@ async function updateSubscriptionData(emailData) {
     
     // Check if price changed
     if (subscription.amount !== amount) {
-      console.log(`Price change detected for ${merchant}: ${subscription.amount} -> ${amount}`);
+      logger.info('Price change detected', { merchant, oldAmount: subscription.amount, newAmount: amount });
       
       // Log the change
       await logPriceChange(subscription.id, subscription.amount, amount);

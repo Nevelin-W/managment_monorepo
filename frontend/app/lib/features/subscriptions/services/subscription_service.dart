@@ -1,45 +1,31 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/subscription_model.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/utils/app_logger.dart';
+import '../../../core/services/token_service.dart';
 
 class SubscriptionService {
-  final _secureStorage = const FlutterSecureStorage();
+  final TokenService _tokens = TokenService();
   late final LoggerScope _log;
 
   SubscriptionService() {
     _log = AppLogger.scope('SubscriptionService');
   }
 
-  Future<String?> _readToken(String key) async {
-    try {
-      String? token;
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        token = prefs.getString(key);
-      } else {
-        token = await _secureStorage.read(key: key);
-      }
-      _log.debug('Token read', {'key': key, 'present': token != null});
-      return token;
-    } catch (e, stackTrace) {
-      _log.error('Failed to read token', error: e, stackTrace: stackTrace, context: {'key': key});
-      return null;
-    }
-  }
-
-  Future<List<Subscription>> getSubscriptions() async {
-    _log.debug('Fetching subscriptions');
-    final token = await _readToken('auth_token');
-
+  Future<String> _requireAuthToken() async {
+    final token = await _tokens.getAuthToken();
     if (token == null) {
       _log.warning('No authentication token available');
       throw Exception('Authentication required');
     }
+    return token;
+  }
+
+  Future<List<Subscription>> getSubscriptions() async {
+    _log.debug('Fetching subscriptions');
+    final token = await _requireAuthToken();
 
     try {
       final response = await http.get(
@@ -69,11 +55,7 @@ class SubscriptionService {
   Future<Subscription> createSubscription(Subscription subscription) async {
     _log.info('Creating subscription', {'name': subscription.name});
 
-    final token = await _readToken('auth_token');
-    if (token == null) {
-      _log.warning('No authentication token available');
-      throw Exception('Authentication required');
-    }
+    final token = await _requireAuthToken();
 
     final subscriptionJson = subscription.toJson()..remove('id');
     if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
@@ -111,11 +93,7 @@ class SubscriptionService {
   Future<void> updateSubscription(Subscription subscription) async {
     _log.info('Updating subscription', {'id': subscription.id, 'name': subscription.name});
 
-    final token = await _readToken('auth_token');
-    if (token == null) {
-      _log.warning('No authentication token available');
-      throw Exception('Authentication required');
-    }
+    final token = await _requireAuthToken();
 
     if (kDebugMode && AppConfig.logLevel == LogLevel.debug) {
       _log.debug('Subscription update payload', {'data': subscription.toJson()});
@@ -151,11 +129,7 @@ class SubscriptionService {
   Future<void> deleteSubscription(String id) async {
     _log.info('Deleting subscription', {'id': id});
 
-    final token = await _readToken('auth_token');
-    if (token == null) {
-      _log.warning('No authentication token available');
-      throw Exception('Authentication required');
-    }
+    final token = await _requireAuthToken();
 
     try {
       final response = await http.delete(

@@ -30,7 +30,8 @@ class SubscriptionsHomeScreen extends StatefulWidget {
 }
 
 class _SubscriptionsHomeScreenState extends State<SubscriptionsHomeScreen> {
-  SubscriptionFilter _selectedFilter = SubscriptionFilter.upcoming;
+  SubscriptionFilter? _selectedFilter;
+  bool _hasUserSelectedFilter = false;
 
   @override
   void initState() {
@@ -38,8 +39,28 @@ class _SubscriptionsHomeScreenState extends State<SubscriptionsHomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<SubscriptionProvider>().fetchSubscriptions();
+        
+        // Initialize from preferences
+        if (_selectedFilter == null && !_hasUserSelectedFilter) {
+          final prefs = context.read<SubscriptionPreferencesProvider>();
+          setState(() {
+            _selectedFilter = _getFilterFromSortOrder(prefs.defaultSortOrder);
+          });
+        }
       }
     });
+  }
+
+  SubscriptionFilter _getFilterFromSortOrder(String sortOrder) {
+    switch (sortOrder) {
+      case 'expensive':
+        return SubscriptionFilter.mostExpensive;
+      case 'recent':
+        return SubscriptionFilter.recent;
+      case 'upcoming':
+      default:
+        return SubscriptionFilter.upcoming;
+    }
   }
 
   void _showAddSubscriptionDialog() {
@@ -95,7 +116,9 @@ class _SubscriptionsHomeScreenState extends State<SubscriptionsHomeScreen> {
   }
 
   List<Subscription> _getFilteredSubscriptions(List<Subscription> subs) {
-    switch (_selectedFilter) {
+    final filter = _selectedFilter ?? SubscriptionFilter.upcoming;
+    
+    switch (filter) {
       case SubscriptionFilter.mostExpensive:
         final sorted = List<Subscription>.from(subs);
         sorted.sort((a, b) => b.amount.compareTo(a.amount));
@@ -116,6 +139,22 @@ class _SubscriptionsHomeScreenState extends State<SubscriptionsHomeScreen> {
     final themeColors = context.select<ThemeProvider, ThemeColors>(
       (provider) => provider.themeColors,
     );
+    
+    // Watch preferences and update filter if user hasn't manually selected
+    final prefs = context.watch<SubscriptionPreferencesProvider>();
+    if (!_hasUserSelectedFilter && _selectedFilter != null) {
+      final preferenceFilter = _getFilterFromSortOrder(prefs.defaultSortOrder);
+      if (_selectedFilter != preferenceFilter) {
+        // Update filter to match new preference
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _selectedFilter = preferenceFilter;
+            });
+          }
+        });
+      }
+    }
 
     return Scaffold(
       backgroundColor: themeColors.background,
@@ -159,9 +198,12 @@ class _SubscriptionsHomeScreenState extends State<SubscriptionsHomeScreen> {
                       themeColors: themeColors,
                       subscriptions:
                           _getFilteredSubscriptions(subProvider.subscriptions),
-                      selectedFilter: _selectedFilter,
+                      selectedFilter: _selectedFilter ?? SubscriptionFilter.upcoming,
                       onFilterChanged: (filter) {
-                        setState(() => _selectedFilter = filter);
+                        setState(() {
+                          _selectedFilter = filter;
+                          _hasUserSelectedFilter = true;
+                        });
                       },
                       onEdit: _showEditSubscriptionDialog,
                       onDelete: _confirmDelete,
@@ -257,14 +299,12 @@ class _IconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onPressed;
   final ThemeColors themeColors;
-  final Color? color;
   final String? tooltip;
 
   const _IconButton({
     required this.icon,
     required this.onPressed,
     required this.themeColors,
-    this.color,
     this.tooltip,
   });
 
@@ -281,7 +321,7 @@ class _IconButton extends StatelessWidget {
           ),
         ),
         child: IconButton(
-          icon: Icon(icon, color: color ?? Colors.grey[400], size: 20),
+          icon: Icon(icon, color: Colors.grey[400], size: 20),
           onPressed: onPressed,
           padding: const EdgeInsets.all(8),
           constraints: const BoxConstraints(),
@@ -425,7 +465,7 @@ class _SpendingOverview extends StatelessWidget {
   Widget build(BuildContext context) {
     final nextRenewal = _getNextRenewal();
     final mostExpensive = _getMostExpensive();
-    final prefs = context.watch<SubscriptionPreferencesProvider>(); // ADDED
+    final prefs = context.watch<SubscriptionPreferencesProvider>();
 
     return SliverToBoxAdapter(
       child: Padding(
@@ -438,7 +478,7 @@ class _SpendingOverview extends StatelessWidget {
                 title: 'Next Renewal',
                 subtitle:
                     '${nextRenewal.name} • ${_getDaysUntil(nextRenewal.nextBillingDate)} days',
-                amount: prefs.formatAmount(nextRenewal.amount), // FIXED
+                amount: prefs.formatAmount(nextRenewal.amount),
                 themeColors: themeColors,
                 gradientColors: [
                   themeColors.secondary.withValues(alpha: 0.2),
@@ -452,7 +492,7 @@ class _SpendingOverview extends StatelessWidget {
                 icon: Icons.trending_up,
                 title: 'Highest Cost',
                 subtitle: mostExpensive.name,
-                amount: '${prefs.formatAmount(mostExpensive.amount)}/mo', // FIXED
+                amount: '${prefs.formatAmount(mostExpensive.amount)}/mo',
                 themeColors: themeColors,
                 gradientColors: [
                   themeColors.primary.withValues(alpha: 0.2),

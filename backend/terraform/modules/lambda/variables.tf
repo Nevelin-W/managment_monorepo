@@ -18,6 +18,11 @@ variable "subscriptions_table" {
   type        = string
 }
 
+variable "subscriptions_changes_table" {
+  description = "DynamoDB subscription changes table name"
+  type        = string
+}
+
 variable "documents_bucket" {
   description = "S3 documents bucket name"
   type        = string

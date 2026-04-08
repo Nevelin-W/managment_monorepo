@@ -3,15 +3,15 @@
 # Deployment script for Subscription Tracker backend
 # Usage: ./scripts/deploy.sh dev|prod
 
-set -e
+set -euo pipefail
 
-ENVIRONMENT=$1
-HOME_DIR=$(pwd)
-LAMBDA_DIR="$HOME_DIR/backend/terraform/lambda_functions"
-
+ENVIRONMENT="${1:-}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+HOME_DIR="$(dirname "$SCRIPT_DIR")"
+LAMBDA_DIR="$HOME_DIR/terraform/lambda_functions"
 
 if [ -z "$ENVIRONMENT" ]; then
-  echo "Usage: ./managment_monorepo/backend/scripts/deploy.sh [dev|prod]"
+  echo "Usage: ./backend/scripts/deploy.sh [dev|prod]"
   exit 1
 fi
 
@@ -25,23 +25,24 @@ echo "Deploying to $ENVIRONMENT environment..."
 # Colors for output
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'
+NC='\033[0m'
 
 # Step 1: Install Lambda dependencies
-echo -e "${BLUE} Installing Lambda dependencies...${NC}"
-cd $LAMBDA_DIR
-npm install --omit=dev
+echo -e "${BLUE}Installing Lambda dependencies...${NC}"
+cd "$LAMBDA_DIR"
+npm ci --omit=dev
 cd ..
 
 # Step 2: Create Lambda layer
-echo -e "${BLUE} Creating Lambda layer...${NC}"
+echo -e "${BLUE}Creating Lambda layer...${NC}"
 mkdir -p "$LAMBDA_DIR/layers/nodejs"
 cp -r "$LAMBDA_DIR/node_modules" "$LAMBDA_DIR/layers/nodejs/"
 cd "$LAMBDA_DIR/layers"
-zip -r dependencies.zip nodejs
+zip -r -q dependencies.zip nodejs
 
-# # Step 3: Package each Lambda function
-# echo -e "${BLUE}Packaging Lambda functions...${NC}"
+# Step 3: Package each Lambda function (including shared module)
+echo -e "${BLUE}Packaging Lambda functions...${NC}"
 
 LAMBDA_DIRS=(
   "auth/login"
@@ -61,29 +62,29 @@ LAMBDA_DIRS=(
 for dir in "${LAMBDA_DIRS[@]}"; do
   echo "  Packaging $dir..."
   FUNCTION_DIR="$LAMBDA_DIR/$dir"
-  cd "$LAMBDA_DIR/$dir"
-  zip -r function.zip index.js
+  
+  # Clean previous build
+  rm -f "$FUNCTION_DIR/function.zip"
+  
+  # Create zip with the function code
+  cd "$FUNCTION_DIR"
+  zip -r -q function.zip index.js
+  
+  # Add shared module to the zip
+  cd "$LAMBDA_DIR"
+  zip -r -q "$FUNCTION_DIR/function.zip" shared/
 done
 
-# # Step 4: Deploy infrastructure with Terraform
-# echo -e "${BLUE}🏗️  Deploying infrastructure...${NC}"
-# cd terraform/environments/$ENVIRONMENT
+echo -e "${GREEN}Packaging complete!${NC}"
 
+# Step 4: Deploy infrastructure with Terraform
+# echo -e "${BLUE}Deploying infrastructure...${NC}"
+# cd "$HOME_DIR/terraform/environments/$ENVIRONMENT"
 # terraform init
-# terraform plan -var-file=variables.tfvars -out=tfplan
+# terraform plan -out=tfplan
 # terraform apply tfplan
-
-# # Step 5: Get outputs
-# echo -e "${GREEN}✅ Deployment complete!${NC}"
-# echo -e "${BLUE}📊 Infrastructure outputs:${NC}"
-# terraform output
-
-# # Clean up
 # rm tfplan
 
-# echo -e "${GREEN}🎉 Deployment successful!${NC}"
-# echo ""
+# echo -e "${GREEN}Deployment complete!${NC}"
 # echo "API Endpoint: $(terraform output -raw api_endpoint)"
 # echo "User Pool ID: $(terraform output -raw user_pool_id)"
-# echo ""
-# echo "Update your Flutter app with these values!"

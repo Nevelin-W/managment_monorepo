@@ -16,8 +16,8 @@ import '../../features/home/screens/main_home_screen.dart';
 import '../../features/settings/screens/settings_screen.dart';
 
 // Subscription app screens
-import '../../../features/subscriptions/screens/subscriptions_home_screen.dart';
-import '../../../features/subscriptions/screens/subscriptions_list_screen.dart';
+import '../../features/subscriptions/screens/subscriptions_home_screen.dart';
+import '../../features/subscriptions/screens/subscriptions_list_screen.dart';
 import '../../features/subscriptions/screens/subscription_settings_screen.dart';
 
 /// Route names as constants for type-safe navigation

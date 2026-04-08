@@ -4,72 +4,21 @@ import 'package:flutter/foundation.dart';
 import '../../features/auth/models/user_model.dart';
 import '../../core/config/app_config.dart';
 import '../../core/utils/app_logger.dart';
-
-// Platform-aware storage
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import './token_service.dart';
 
 class AuthService {
-  final _secureStorage = const FlutterSecureStorage();
+  final TokenService _tokens = TokenService();
   late final LoggerScope _log;
 
   AuthService() {
     _log = AppLogger.scope('AuthService');
   }
 
-  // Platform-aware storage methods
-  Future<void> _writeToken(String key, String value) async {
-    try {
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString(key, value);
-      } else {
-        await _secureStorage.write(key: key, value: value);
-      }
-      _log.debug('Token stored successfully', {'key': key});
-    } catch (e, stackTrace) {
-      _log.error('Failed to store token', error: e, stackTrace: stackTrace, context: {'key': key});
-      rethrow;
-    }
-  }
-
-  Future<String?> _readToken(String key) async {
-    try {
-      String? token;
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        token = prefs.getString(key);
-      } else {
-        token = await _secureStorage.read(key: key);
-      }
-      
-      _log.debug('Token read', {'key': key, 'present': token != null});
-      return token;
-    } catch (e, stackTrace) {
-      _log.error('Failed to read token', error: e, stackTrace: stackTrace, context: {'key': key});
-      return null;
-    }
-  }
-
-  Future<void> _deleteToken(String key) async {
-    try {
-      if (kIsWeb) {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove(key);
-      } else {
-        await _secureStorage.delete(key: key);
-      }
-      _log.debug('Token deleted', {'key': key});
-    } catch (e, stackTrace) {
-      _log.error('Failed to delete token', error: e, stackTrace: stackTrace, context: {'key': key});
-    }
-  }
-
   Future<User?> getCurrentUser() async {
     _log.debug('Checking current user authentication');
     
     try {
-      final token = await _readToken('auth_token');
+      final token = await _tokens.getAuthToken();
       if (token == null) {
         _log.debug('No authentication token found');
         return null;
@@ -89,7 +38,7 @@ class AuthService {
       }
       
       _log.warning('Token validation failed', {'statusCode': response.statusCode});
-      await _deleteToken('auth_token');
+      await _tokens.delete(TokenService.authTokenKey);
       return null;
     } catch (e, stackTrace) {
       _log.error('Authentication check failed', error: e, stackTrace: stackTrace);
@@ -124,7 +73,7 @@ class AuthService {
         final data = jsonDecode(response.body);
         
         if (data['idToken'] != null) {
-          await _writeToken('auth_token', data['idToken']);
+          await _tokens.write(TokenService.authTokenKey, data['idToken']);
           _log.info('ID token stored successfully');
           
           // Validate token structure in debug mode only
@@ -150,12 +99,12 @@ class AuthService {
         
         // Store additional tokens
         if (data['token'] != null) {
-          await _writeToken('access_token', data['token']);
+          await _tokens.write(TokenService.accessTokenKey, data['token']);
           _log.debug('Access token stored');
         }
         
         if (data['refreshToken'] != null) {
-          await _writeToken('refresh_token', data['refreshToken']);
+          await _tokens.write(TokenService.refreshTokenKey, data['refreshToken']);
           _log.debug('Refresh token stored');
         }
 
@@ -283,7 +232,7 @@ class AuthService {
     _log.info('Profile update attempt');
     
     try {
-      final token = await _readToken('auth_token');
+      final token = await _tokens.getAuthToken();
       if (token == null) {
         _log.warning('No auth token found for profile update');
         throw Exception('Not authenticated');
@@ -341,13 +290,13 @@ class AuthService {
   _log.info('Password change attempt');
   
   try {
-    final idToken = await _readToken('auth_token');
+    final idToken = await _tokens.getAuthToken();
     if (idToken == null) {
       _log.warning('No auth token found for password change');
       throw Exception('Not authenticated');
     }
 
-    final accessToken = await _readToken('access_token');
+    final accessToken = await _tokens.getAccessToken();
     if (accessToken == null) {
       _log.warning('No access token found for password change');
       throw Exception('Not authenticated - missing access token');
@@ -398,9 +347,7 @@ class AuthService {
   Future<void> logout() async {
     _log.info('User logout initiated');
     try {
-      await _deleteToken('auth_token');
-      await _deleteToken('access_token');
-      await _deleteToken('refresh_token');
+      await _tokens.clearAll();
       _log.info('Logout completed - all tokens cleared');
     } catch (e, stackTrace) {
       _log.error('Logout error', error: e, stackTrace: stackTrace);

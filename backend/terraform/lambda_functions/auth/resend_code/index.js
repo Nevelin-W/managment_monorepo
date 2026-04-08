@@ -1,71 +1,55 @@
 const { CognitoIdentityProviderClient, ResendConfirmationCodeCommand } = require("@aws-sdk/client-cognito-identity-provider");
+const { success, error, logRequest, logResponse, logger, parseBody, isValidEmail } = require("../../shared/response");
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
 
 exports.handler = async (event) => {
-  console.log('Resend code request:', JSON.stringify(event, null, 2));
+  logRequest('Resend code request', event);
+  const startTime = Date.now();
   
   try {
-    const body = JSON.parse(event.body);
+    const body = parseBody(event);
     const { email } = body;
 
     if (!email) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Email is required' }),
-      };
+      return error(400, 'Email is required');
     }
 
-    // Resend confirmation code
-    const resendCommand = new ResendConfirmationCodeCommand({
+    if (!isValidEmail(email)) {
+      return error(400, 'Invalid email format');
+    }
+
+    await cognitoClient.send(new ResendConfirmationCodeCommand({
       ClientId: process.env.USER_POOL_CLIENT_ID,
       Username: email,
+    }));
+
+    const resp = success(200, {
+      message: 'Verification code resent successfully',
     });
+    logResponse('Resend code', event, resp, startTime);
+    return resp;
 
-    await cognitoClient.send(resendCommand);
-
-    return {
-      statusCode: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        message: 'Verification code resent successfully',
-      }),
-    };
-
-  } catch (error) {
-    console.error('Resend code error:', error);
+  } catch (err) {
+    logger.error('Resend code failed', { error: err.name, message: err.message, stack: err.stack });
     
-    let statusCode = 500;
-    let errorMessage = 'Internal server error';
-    
-    if (error.name === 'UserNotFoundException') {
-      statusCode = 404;
-      errorMessage = 'User not found';
-    } else if (error.name === 'InvalidParameterException') {
-      statusCode = 400;
-      errorMessage = 'User is already confirmed';
-    } else if (error.name === 'LimitExceededException') {
-      statusCode = 429;
-      errorMessage = 'Too many requests. Please try again later';
+    if (err.name === 'UserNotFoundException') {
+      const resp = error(404, 'User not found');
+      logResponse('Resend code', event, resp, startTime);
+      return resp;
     }
-    
-    return {
-      statusCode,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        error: errorMessage,
-        message: error.message 
-      }),
-    };
+    if (err.name === 'InvalidParameterException') {
+      const resp = error(400, 'User is already confirmed');
+      logResponse('Resend code', event, resp, startTime);
+      return resp;
+    }
+    if (err.name === 'LimitExceededException') {
+      const resp = error(429, 'Too many requests. Please try again later');
+      logResponse('Resend code', event, resp, startTime);
+      return resp;
+    }
+    const resp = err.statusCode ? error(err.statusCode, err.message) : error(500, 'Internal server error', err.message);
+    logResponse('Resend code', event, resp, startTime);
+    return resp;
   }
 };

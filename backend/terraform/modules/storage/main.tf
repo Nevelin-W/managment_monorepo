@@ -75,7 +75,7 @@ resource "aws_s3_bucket_cors_configuration" "documents" {
   cors_rule {
     allowed_headers = ["*"]
     allowed_methods = ["GET", "PUT", "POST", "DELETE"]
-    allowed_origins = ["*"]  # Restrict this in production
+    allowed_origins = var.environment == "prod" ? var.allowed_origins : ["*"]
     expose_headers  = ["ETag"]
     max_age_seconds = 3000
   }

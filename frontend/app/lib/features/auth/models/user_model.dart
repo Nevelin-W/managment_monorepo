@@ -3,11 +3,11 @@ class User {
   final String email;
   final String name;
   final bool emailVerified;
-  final String? token;          // Access token (optional, for future use)
-  final String? idToken;        // ID token (required for API Gateway)
-  final String? refreshToken;   // Refresh token (optional)
+  final String? token;
+  final String? idToken;
+  final String? refreshToken;
 
-  User({
+  const User({
     required this.id,
     required this.email,
     required this.name,
@@ -23,8 +23,8 @@ class User {
       email: json['email'] ?? '',
       name: json['name'] ?? '',
       emailVerified: json['emailVerified'] ?? false,
-      token: json['token'],           // Access token
-      idToken: json['idToken'],       // ID token
+      token: json['token'],
+      idToken: json['idToken'],
       refreshToken: json['refreshToken'],
     );
   }
@@ -40,6 +40,34 @@ class User {
       if (refreshToken != null) 'refreshToken': refreshToken,
     };
   }
+
+  User copyWith({
+    String? id,
+    String? email,
+    String? name,
+    bool? emailVerified,
+    String? token,
+    String? idToken,
+    String? refreshToken,
+  }) {
+    return User(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      emailVerified: emailVerified ?? this.emailVerified,
+      token: token ?? this.token,
+      idToken: idToken ?? this.idToken,
+      refreshToken: refreshToken ?? this.refreshToken,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is User && runtimeType == other.runtimeType && id == other.id && email == other.email;
+
+  @override
+  int get hashCode => id.hashCode ^ email.hashCode;
 
   @override
   String toString() {

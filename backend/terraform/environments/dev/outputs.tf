@@ -28,3 +28,8 @@ output "subscriptions_table" {
   description = "DynamoDB subscriptions table name"
   value       = module.database.subscriptions_table_name
 }
+
+output "dashboard_url" {
+  description = "CloudWatch Dashboard URL"
+  value       = module.dashboard.dashboard_url
+}

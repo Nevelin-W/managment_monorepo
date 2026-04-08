@@ -2,106 +2,98 @@ const { CognitoIdentityProviderClient, SignUpCommand, AdminConfirmSignUpCommand 
 const { DynamoDBClient } = require("@aws-sdk/client-dynamodb");
 const { DynamoDBDocumentClient, PutCommand } = require("@aws-sdk/lib-dynamodb");
 const { randomUUID } = require('crypto');
+const { success, error, logRequest, logResponse, logger, parseBody, isValidEmail } = require("../../shared/response");
 
 const cognitoClient = new CognitoIdentityProviderClient({ region: process.env.AWS_REGION });
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: process.env.AWS_REGION }));
 
 exports.handler = async (event) => {
-  console.log('Signup request:', JSON.stringify(event, null, 2));
+  logRequest('Signup request', event);
+  const startTime = Date.now();
   
   try {
-    const body = JSON.parse(event.body);
+    const body = parseBody(event);
     const { email, password, name } = body;
 
     if (!email || !password || !name) {
-      return {
-        statusCode: 400,
-        headers: {
-          'Content-Type': 'application/json',
-          'Access-Control-Allow-Origin': '*',
-        },
-        body: JSON.stringify({ error: 'Email, password, and name are required' }),
-      };
+      return error(400, 'Email, password, and name are required');
+    }
+
+    if (!isValidEmail(email)) {
+      return error(400, 'Invalid email format');
+    }
+
+    if (typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 50) {
+      return error(400, 'Name must be between 2 and 50 characters');
     }
 
     // Create user in Cognito
-    const signUpCommand = new SignUpCommand({
+    const signUpResponse = await cognitoClient.send(new SignUpCommand({
       ClientId: process.env.USER_POOL_CLIENT_ID,
       Username: email,
       Password: password,
       UserAttributes: [
         { Name: 'email', Value: email },
-        { Name: 'name', Value: name },
+        { Name: 'name', Value: name.trim() },
       ],
-    });
-
-    const signUpResponse = await cognitoClient.send(signUpCommand);
+    }));
     
-    // Auto-confirm user (for dev - remove in production)
+    // Auto-confirm user (for dev only)
     if (process.env.ENVIRONMENT === 'dev') {
-      const confirmCommand = new AdminConfirmSignUpCommand({
+      await cognitoClient.send(new AdminConfirmSignUpCommand({
         UserPoolId: process.env.USER_POOL_ID,
         Username: email,
-      });
-      await cognitoClient.send(confirmCommand);
+      }));
     }
 
     // Create user record in DynamoDB
     const userId = randomUUID();
     const timestamp = new Date().toISOString();
     
-    const putCommand = new PutCommand({
+    await dynamoClient.send(new PutCommand({
       TableName: process.env.USERS_TABLE,
       Item: {
         id: userId,
         email,
-        name,
+        name: name.trim(),
         cognitoSub: signUpResponse.UserSub,
+        emailVerified: process.env.ENVIRONMENT === 'dev',
         createdAt: timestamp,
         updatedAt: timestamp,
       },
+      ConditionExpression: 'attribute_not_exists(email)',
+    }));
+
+    const resp = success(201, {
+      id: userId,
+      email,
+      name: name.trim(),
+      message: 'User created successfully',
     });
+    logResponse('Signup', event, resp, startTime);
+    return resp;
 
-    await dynamoClient.send(putCommand);
-
-    return {
-      statusCode: 201,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({
-        id: userId,
-        email,
-        name,
-        message: 'User created successfully',
-      }),
-    };
-
-  } catch (error) {
-    console.error('Signup error:', error);
+  } catch (err) {
+    logger.error('Signup failed', { error: err.name, message: err.message, stack: err.stack });
     
-    let statusCode = 500;
-    let errorMessage = 'Internal server error';
-    
-    if (error.name === 'UsernameExistsException') {
-      statusCode = 409;
-      errorMessage = 'User already exists';
-    } else if (error.name === 'InvalidPasswordException') {
-      statusCode = 400;
-      errorMessage = 'Password does not meet requirements';
+    if (err.name === 'UsernameExistsException') {
+      const resp = error(409, 'User already exists');
+      logResponse('Signup', event, resp, startTime);
+      return resp;
+    }
+    if (err.name === 'InvalidPasswordException') {
+      const resp = error(400, 'Password does not meet requirements');
+      logResponse('Signup', event, resp, startTime);
+      return resp;
+    }
+    if (err.name === 'ConditionalCheckFailedException') {
+      const resp = error(409, 'User already exists');
+      logResponse('Signup', event, resp, startTime);
+      return resp;
     }
     
-    return {
-      statusCode,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-      body: JSON.stringify({ 
-        error: errorMessage,
-        message: error.message 
-      }),
-    };
+    const resp = error(500, 'Internal server error', err.message);
+    logResponse('Signup', event, resp, startTime);
+    return resp;
   }
 };

@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import '../../../features/auth/providers/auth_provider.dart';
 import '../../../features/home/providers/theme_provider.dart';
 import '../../../core/config/theme.dart';
-import '../../../core/utils/app_constants.dart';
 
 // Reusable widgets
 import '../../../core/widgets/common/grid_painter.dart';
